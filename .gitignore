@@ -1,3 +1,7 @@
 .DS_Store
 .obsidian/workspace*
 .obsidian/cache
+# 个人笔记区：放这里的东西不会被同步覆盖、也不会上传到公司库
+_我的笔记/
+__pycache__/
+*.pyc

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.xiangshu.fingerprint-updater-weekly</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/python3</string>
+		<string>/Users/mac/obsidian/祥子AI/07-AI协作/skills/humanizer-xiangshu/scripts/fingerprint_updater.py</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>ANTHROPIC_MODEL</key>
+		<string>claude-opus-4-8</string>
+		<key>HTTP_PROXY</key>
+		<string>http://127.0.0.1:7890</string>
+		<key>HTTPS_PROXY</key>
+		<string>http://127.0.0.1:7890</string>
+		<key>NO_PROXY</key>
+		<string>localhost,127.0.0.1,::1,.local</string>
+		<key>LANG</key>
+		<string>zh_CN.UTF-8</string>
+		<key>LC_ALL</key>
+		<string>zh_CN.UTF-8</string>
+		<key>PATH</key>
+		<string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Users/mac/.npm-global/bin</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>/Users/mac/obsidian/祥子AI</string>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Weekday</key>
+		<integer>0</integer>
+		<key>Hour</key>
+		<integer>21</integer>
+		<key>Minute</key>
+		<integer>20</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/Users/mac/.claude/logs/fingerprint-updater.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/mac/.claude/logs/fingerprint-updater.log</string>
+	<key>RunAtLoad</key>
+	<false/>
+</dict>
+</plist>

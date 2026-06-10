@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【改标题】交互演示页</title>
+<!--
+  ════════════════════════════════════════════════════════════════════
+   content-visualizer · 轻量原生「交互演示」模板  (template-demo.html)
+  ════════════════════════════════════════════════════════════════════
+   适合：原理 / 机制 / 操作 / 流程 / 算法 —— 让人「动手看懂过程」。
+   零依赖（无 React / 无任何 CDN），手机直接开、免内联，可直接发妙搭。
+
+   改法：
+     ① 改 <title> + 顶部 .tabs 的按钮（几个标签就留几个 <section>）
+     ② 每个 <section data-panel="x"> 填你的内容
+     ③ 交互/动画组件照抄改数据（下面给了 2 个可复制单元）
+     ④ 配色走 :root CSS 变量，暖调已调好；深浅色自动带
+   🔴 交互逻辑改完务必 browser-harness 实开实拨验证，别花架子。
+  ════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root{
+    --bg:#faf9f6; --card:#fff; --text:#1c1b18; --text-soft:#6b6862;
+    --line:#e7e4dc; --accent:#c2410c; --link:#2563eb; --pill:#f0eee8;
+    --on:#fbbf24; --off:#d8d3c6; --wire:#c9c2b2;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.04);
+  }
+  html[data-theme="dark"]{
+    --bg:#16150f; --card:#1f1e17; --text:#ece9e1; --text-soft:#9c988c;
+    --line:#322f26; --accent:#f97316; --link:#60a5fa; --pill:#2a2820;
+    --on:#fbbf24; --off:#3a382d; --wire:#4a4738;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);line-height:1.75;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 90px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-bottom:36px;flex-wrap:wrap}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap}
+  .tab{border:none;cursor:pointer;background:var(--pill);color:var(--text-soft);
+    padding:9px 15px;border-radius:10px;font-size:14px;font-weight:600;transition:.18s}
+  .tab:hover{color:var(--text)} .tab.active{background:var(--accent);color:#fff}
+  .theme-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+    background:var(--card);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;color:var(--text-soft);letter-spacing:1px}
+  h1{font-family:Georgia,"Songti SC",serif;font-size:28px;font-weight:700;margin:6px 0 18px;line-height:1.3}
+  h2{font-family:Georgia,"Songti SC",serif;font-size:20px;margin:38px 0 12px}
+  p{margin:0 0 16px} strong{color:var(--text)}
+  .panel{display:none}.panel.active{display:block;animation:fade .3s}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  /* —— 卡片 + 真值表 —— */
+  .lab{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);padding:24px;margin:24px 0}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:8px 0}
+  th{text-align:left;font-weight:600;color:var(--text-soft);font-size:12px;letter-spacing:.5px;
+    padding:0 12px 10px 0;border-bottom:1px solid var(--line)}
+  td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .tt tr.hit td{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+  .tt td:last-child{font-weight:800;font-family:ui-monospace,monospace}
+  /* —— 交互单元：开关 / 灯 —— */
+  .stage{display:flex;gap:26px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .sw{text-align:center}
+  .knob{width:74px;height:74px;border-radius:18px;border:2px solid var(--line);background:var(--pill);
+    cursor:pointer;font-size:30px;font-weight:800;font-family:ui-monospace,monospace;color:var(--text-soft);
+    transition:.15s;display:flex;align-items:center;justify-content:center}
+  .knob.hi{background:var(--accent);color:#fff;border-color:var(--accent);
+    box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+  .sw label{display:block;margin-top:8px;font-size:13px;color:var(--text-soft);font-weight:600}
+  .bulb{width:64px;height:64px;border-radius:50%;margin:0 auto;background:var(--off);border:2px solid var(--line);transition:.2s}
+  .bulb.on{background:var(--on);border-color:var(--on);box-shadow:0 0 28px 4px color-mix(in srgb,var(--on) 70%,transparent)}
+  .out{font-family:ui-monospace,monospace;font-size:30px;font-weight:800;margin-top:10px;text-align:center}
+  .explain{margin-top:20px;padding:14px 16px;background:var(--pill);border-radius:10px;font-size:14.5px}
+  /* —— 分步动画 —— */
+  .steps{display:flex;gap:8px;margin:8px 0 20px}
+  .step{flex:1;text-align:center;padding:10px 6px;border-radius:10px;background:var(--pill);
+    color:var(--text-soft);font-size:13px;font-weight:600;transition:.2s}
+  .step.active{background:var(--accent);color:#fff}
+  .stepbtns{display:flex;gap:10px;justify-content:center;margin-top:18px}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;
+    padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* —— SVG 电路/连线 —— */
+  svg{display:block;margin:6px auto;max-width:100%;height:auto}
+  .wire{stroke:var(--wire);stroke-width:5;fill:none;stroke-linecap:round;transition:.3s}
+  .wire.live{stroke:var(--accent);filter:drop-shadow(0 0 5px var(--accent))}
+  .node{fill:var(--text-soft)}
+  .lamp{fill:var(--off);stroke:var(--wire);stroke-width:3}
+  .lamp.live{fill:var(--on);filter:drop-shadow(0 0 9px var(--on))}
+  .note{font-size:13px;color:var(--text-soft);border-left:3px solid var(--line);padding-left:14px;margin-top:32px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 顶栏：tab 切换 + 深浅色。tab 数量 = 下面 section 数量 -->
+  <div class="topbar">
+    <div class="tabs">
+      <button class="tab" data-tab="demo">交互演示</button>
+      <button class="tab" data-tab="anim">分步动画</button>
+      <!-- 加 tab：复制一行，data-tab 唯一，再加对应 <section data-panel> -->
+    </div>
+    <button class="theme-btn" id="themeBtn" title="深浅色">◑</button>
+  </div>
+
+  <!-- ════ 区块 1：交互演示（开关 → 灯）最小单元 ════ -->
+  <section class="panel" data-panel="demo">
+    <div class="eyebrow">交互演示</div>
+    <h1>【改标题】拨一下，看结果怎么变</h1>
+    <p>【一句话说明这个交互在演示什么。让人动手 &gt; 你讲给他听。】</p>
+
+    <div class="lab">
+      <div class="stage">
+        <div class="sw"><button class="knob" id="swA">0</button><label>输入 A</label></div>
+        <div style="font-size:28px;color:var(--text-soft)">→</div>
+        <div>
+          <div class="bulb" id="bulb"></div>
+          <div class="out" id="out">0</div>
+        </div>
+      </div>
+      <div class="explain" id="explain"></div>
+    </div>
+    <p class="note">复制这个单元，把"输入 A → 灯"换成你的语义（开关/阀门/条件 → 结果）。逻辑在下面 JS 的 <code>renderDemo()</code> 里改。</p>
+  </section>
+
+  <!-- ════ 区块 2：分步动画（步骤推进 + SVG 连线点亮）════ -->
+  <section class="panel" data-panel="anim">
+    <div class="eyebrow">分步动画</div>
+    <h1>【改标题】一步步看清楚过程</h1>
+    <p>【说明这个流程在讲什么。分步出现 &gt; 一次甩全部。】</p>
+
+    <div class="lab">
+      <div class="steps" id="steps">
+        <div class="step">① 第一步</div>
+        <div class="step">② 第二步</div>
+        <div class="step">③ 第三步</div>
+      </div>
+      <!-- 一条随步骤点亮的连线（按需换成你的示意图/流程图） -->
+      <svg viewBox="0 0 360 80" width="360">
+        <line class="wire seg1" x1="30" y1="40" x2="150" y2="40"/>
+        <circle class="node" cx="30" cy="40" r="6"/>
+        <line class="wire seg2" x1="150" y1="40" x2="270" y2="40"/>
+        <circle class="node" cx="150" cy="40" r="6"/>
+        <circle class="lamp" id="endLamp" cx="300" cy="40" r="18"/>
+      </svg>
+      <div class="explain" id="stepText"></div>
+      <div class="stepbtns">
+        <button class="btn" id="resetBtn">重置</button>
+        <button class="btn primary" id="nextBtn">下一步 →</button>
+      </div>
+    </div>
+    <p class="note">step 变量 0→3 驱动高亮 + 连线点亮。也可改成滚动进视口自动播（用 IntersectionObserver）。</p>
+  </section>
+
+</div>
+
+<script>
+  /* ── tab（带 #hash 路由，刷新/分享回到同一栏）── */
+  const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+  function show(n){if(![...tabs].some(t=>t.dataset.tab===n))n=tabs[0].dataset.tab;
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===n));
+    panels.forEach(p=>p.classList.toggle('active',p.dataset.panel===n));}
+  tabs.forEach(t=>t.onclick=()=>location.hash='tab='+t.dataset.tab);
+  function fromHash(){const m=location.hash.match(/tab=([\w-]+)/);show(m?m[1]:tabs[0].dataset.tab);}
+  addEventListener('hashchange',fromHash);fromHash();
+
+  /* ── 深浅色（记住选择）── */
+  const root=document.documentElement,saved=localStorage.getItem('theme');
+  if(saved)root.dataset.theme=saved;
+  themeBtn.onclick=()=>{const n=root.dataset.theme==='dark'?'light':'dark';root.dataset.theme=n;localStorage.setItem('theme',n);};
+
+  /* ── 区块1：交互演示 —— 改这里的逻辑就行 ── */
+  let a=0;
+  function renderDemo(){
+    const out = a;                                   // 👈 你的逻辑：输入→输出（这里直传，可换 a*2、!a、加法等）
+    document.getElementById('swA').textContent=a;
+    document.getElementById('swA').classList.toggle('hi',!!a);
+    document.getElementById('bulb').classList.toggle('on',!!out);
+    document.getElementById('out').textContent=out;
+    document.getElementById('explain').innerHTML = out
+      ? '✅ 输入 A = 1 → 结果 = 1（这里写"为什么"）'
+      : '⭘ 输入 A = 0 → 结果 = 0（拨一下看变化）';
+  }
+  document.getElementById('swA').onclick=()=>{a^=1;renderDemo();};
+  renderDemo();
+
+  /* ── 区块2：分步动画 ── */
+  let step=0; const stepEls=document.querySelectorAll('#steps .step');
+  const STEP_TEXT=[
+    '点「下一步」开始演示。',
+    '第一步发生了什么……（替换成你的解说）',
+    '第二步……连线点亮一段。',
+    '第三步完成 → 终点灯亮，结论在这里。'
+  ];
+  function renderStep(){
+    stepEls.forEach((el,i)=>el.classList.toggle('active',i<step));
+    document.querySelector('.seg1').classList.toggle('live',step>=1);
+    document.querySelector('.seg2').classList.toggle('live',step>=2);
+    document.getElementById('endLamp').classList.toggle('live',step>=3);
+    document.getElementById('stepText').textContent=STEP_TEXT[step];
+    document.getElementById('nextBtn').style.opacity = step>=3?.4:1;
+  }
+  document.getElementById('nextBtn').onclick=()=>{if(step<3){step++;renderStep();}};
+  document.getElementById('resetBtn').onclick=()=>{step=0;renderStep();};
+  renderStep();
+</script>
+</body>
+</html>

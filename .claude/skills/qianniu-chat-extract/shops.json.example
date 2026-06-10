@@ -1,0 +1,6 @@
+{
+  "shops": [
+    {"name": "祥新网商", "slug": "xinshui", "port": 9222},
+    {"name": "Taylormade北京精品店", "slug": "taylormade-bj", "port": 9223}
+  ]
+}

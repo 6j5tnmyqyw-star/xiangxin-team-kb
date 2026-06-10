@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<!--
+  ====================================================================
+  电影感展示页 · 骨架模板（cinematic-showcase skill）v1
+  用法：复制本文件 → 改 §数据区 + 增删 Scene → browser-harness 实开验证
+  技术栈：React18 + Tailwind + GSAP3 + ScrollTrigger + Recharts + Lucide（全 CDN，双击即开）
+  ────────────────────────────────────────────────────────────────
+  这个模板和 content-visualizer 的区别：那个克制专业、双击就讲；
+  这个是「会动、会炫、给录屏/视频演示播放」的电影感页面。
+  内置炫酷能力（开箱即用）：
+    · canvas 粒子光网背景（深色科技感）
+    · GSAP ScrollTrigger 滚动叙事：滚到哪、动到哪（fade-up / stagger / zoom / blur / 视差）
+    · SplitText 逐字翻入大标题、流光渐变文字
+    · 3D 倾斜卡片 TiltCard、磁吸按钮 MagneticButton
+    · 全屏分镜 Scene（一屏一重点，适合录屏节奏）
+    · ★ 一键「自动巡演」：点播放，页面自动匀速滚 + 动画依次播，只管口播
+    · 明暗主题切换（默认深色电影感）、顶部进度条
+  ────────────────────────────────────────────────────────────────
+  铁律：
+    · GSAP 用 cdnjs 3.12.5 UMD；Recharts 只能 2.12.7 UMD（新版无 UMD 会 404 整页 blank）
+    · 配色走 CSS 变量；[data-anim] 初始 opacity:0 由 GSAP 接管，断网降级见 .no-gsap
+    · 要发飞书妙搭/手机：先用 content-visualizer 的 assets/inline-build.js 内联，否则白屏
+  ====================================================================
+-->
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>电影感展示 · 模板</title>
+
+<script>
+  (function(){ try{ var t=localStorage.getItem('cine-theme'); if(t) document.documentElement.dataset.theme=t; }catch(e){} })();
+</script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: {
+        sans: ['-apple-system','BlinkMacSystemFont','"PingFang SC"','"Microsoft YaHei"','sans-serif'],
+        mono: ['"SF Mono"','ui-monospace','"Cascadia Code"','monospace'],
+      },
+      colors: {
+        bg:'rgb(var(--bg) / <alpha-value>)',
+        bg2:'rgb(var(--bg2) / <alpha-value>)',
+        surface:'rgb(var(--surface) / <alpha-value>)',
+        surface2:'rgb(var(--surface2) / <alpha-value>)',
+        line:'rgb(var(--border) / <alpha-value>)',
+        ink:'rgb(var(--ink) / <alpha-value>)',
+        ink2:'rgb(var(--ink2) / <alpha-value>)',
+        muted:'rgb(var(--muted) / <alpha-value>)',
+        faint:'rgb(var(--faint) / <alpha-value>)',
+        c1:'rgb(var(--c1) / <alpha-value>)',
+        c2:'rgb(var(--c2) / <alpha-value>)',
+        c3:'rgb(var(--c3) / <alpha-value>)',
+      },
+    } },
+  };
+</script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<script crossorigin src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  /* ===== 配色变量（默认深色电影科技感）===== */
+  :root, html[data-theme="dark"]{
+    --bg:7 9 16; --bg2:12 15 27; --surface:18 22 38; --surface2:25 30 50;
+    --border:44 52 82; --ink:236 240 252; --ink2:190 199 224; --muted:135 145 178; --faint:88 97 130;
+    --c1:34 211 238;    /* cyan */
+    --c2:167 139 250;   /* violet */
+    --c3:244 114 182;   /* pink */
+  }
+  html[data-theme="light"]{
+    --bg:243 245 252; --bg2:235 239 250; --surface:255 255 255; --surface2:247 249 255;
+    --border:221 227 244; --ink:16 21 40; --ink2:50 59 88; --muted:99 109 140; --faint:150 160 190;
+    --c1:8 145 178; --c2:124 58 237; --c3:219 39 119;
+  }
+
+  html { scroll-behavior:auto; }   /* autoplay 自己控滚动，关掉 smooth 避免叠加 */
+  body { background-color:rgb(var(--bg)); transition:background-color .5s ease; overflow-x:hidden; }
+  ::-webkit-scrollbar { width:10px; }
+  ::-webkit-scrollbar-track { background:rgb(var(--bg)); }
+  ::-webkit-scrollbar-thumb { background:rgb(var(--c2) / .5); border-radius:8px; }
+  ::-webkit-scrollbar-thumb:hover { background:rgb(var(--c2)); }
+
+  /* 流光渐变文字 */
+  .grad-text{ background:linear-gradient(110deg, rgb(var(--c1)), rgb(var(--c2)) 48%, rgb(var(--c3))); background-size:220% auto; -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; animation:gradShift 7s linear infinite; }
+  @keyframes gradShift{ to{ background-position:220% center; } }
+
+  /* 背景光晕 mesh */
+  .mesh{ position:fixed; inset:0; z-index:-20; pointer-events:none; background:
+    radial-gradient(40% 50% at 18% 22%, rgb(var(--c1) / .16), transparent 70%),
+    radial-gradient(42% 52% at 82% 30%, rgb(var(--c2) / .18), transparent 70%),
+    radial-gradient(45% 55% at 50% 92%, rgb(var(--c3) / .12), transparent 70%); }
+  html[data-theme="light"] .mesh{ background:
+    radial-gradient(40% 50% at 18% 22%, rgb(var(--c1) / .10), transparent 70%),
+    radial-gradient(42% 52% at 82% 30%, rgb(var(--c2) / .10), transparent 70%); }
+
+  @keyframes floatY{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-18px)} }
+  .float{ animation:floatY 8s ease-in-out infinite; }
+  @keyframes kenBurns{ 0%{transform:scale(1)} 100%{transform:scale(1.14)} }
+  .ken-burns{ animation:kenBurns 18s ease-out forwards; }
+  @keyframes spinSlow{ to{ transform:rotate(360deg) } }
+  .spin-slow{ animation:spinSlow 26s linear infinite; }
+  @keyframes scrollDot{ 0%{opacity:0;transform:translateY(0)} 35%{opacity:1} 70%{opacity:1} 100%{opacity:0;transform:translateY(14px)} }
+  .scroll-dot{ animation:scrollDot 1.8s ease-in-out infinite; }
+
+  /* GSAP 进场：初始藏起来，加载后由 GSAP 播放；断网降级见 .no-gsap */
+  [data-anim]{ opacity:0; }
+  .no-gsap [data-anim]{ opacity:1 !important; filter:none !important; transform:none !important; }
+
+  .glass{ background:rgb(var(--surface) / .62); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  .neon{ box-shadow:0 0 0 1px rgb(var(--c1) / .14), 0 18px 50px -22px rgb(var(--c2) / .55); }
+  .tilt{ transform-style:preserve-3d; will-change:transform; transition:transform .25s cubic-bezier(.2,.6,.2,1); }
+  .recharts-surface:focus{ outline:none; }
+  .theme-tween, .theme-tween *{ transition:background-color .5s ease, border-color .5s ease, color .5s ease; }
+</style>
+</head>
+<body class="font-sans antialiased text-ink">
+<div class="mesh"></div>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, createContext, useContext } = React;
+
+/* GSAP / Recharts 兜底 */
+const GSAP_OK = (typeof gsap !== "undefined");
+if (GSAP_OK && typeof ScrollTrigger !== "undefined") gsap.registerPlugin(ScrollTrigger);
+const RC = (typeof Recharts !== "undefined" && Recharts) ? Recharts : {};
+const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } = RC;
+const RECHARTS_OK = !!BarChart;
+
+function cssVar(name){ try{ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }catch(e){ return ""; } }
+
+/* ========== 主题 ========== */
+const PALETTE = {
+  dark:  { c1:"#22d3ee", c2:"#a78bfa", c3:"#f472b6", grid:"#2a3352", axis:"#8791b2", axis2:"#bec7e0" },
+  light: { c1:"#0891b2", c2:"#7c3aed", c3:"#db2777", grid:"#dde3f4", axis:"#636e8c", axis2:"#323b58" },
+};
+const ThemeCtx = createContext({ theme:"dark", toggle:()=>{} });
+function usePalette(){ return PALETTE[useContext(ThemeCtx).theme] || PALETTE.dark; }
+
+/* ========== 图标 ========== */
+function getIconNode(name){ if(typeof lucide==="undefined"||!lucide) return null; return (lucide.icons||lucide)[name]||null; }
+function Icon({ name, size=22, className="", strokeWidth=2, style }){
+  const node = getIconNode(name);
+  if(!node) return <span className={className} style={{display:"inline-block",width:size,height:size,...style}} />;
+  const r=(c,i)=>{const[t,a,k]=c;return React.createElement(t,{key:i,...a},Array.isArray(k)?k.map(r):null)};
+  return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+    className={className} style={style} aria-hidden="true">{node.map(r)}</svg>;
+}
+
+/* ========== canvas 粒子光网背景 ========== */
+function ParticleField(){
+  const ref = useRef(null);
+  useEffect(()=>{
+    const canvas = ref.current; if(!canvas) return;
+    const ctx = canvas.getContext("2d"); if(!ctx) return;
+    const DPR = Math.min(window.devicePixelRatio||1, 2);
+    let w=0,h=0,parts=[],raf=0;
+    function resize(){ w=canvas.width=innerWidth*DPR; h=canvas.height=innerHeight*DPR; canvas.style.width=innerWidth+"px"; canvas.style.height=innerHeight+"px"; }
+    function init(){ const n=Math.min(72, Math.floor(innerWidth/20)); parts=Array.from({length:n},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.28*DPR,vy:(Math.random()-.5)*.28*DPR,r:(Math.random()*1.5+.6)*DPR})); }
+    function tick(){
+      ctx.clearRect(0,0,w,h);
+      const c = (cssVar('--c1')||'34 211 238').split(/\s+/).join(',');
+      const link = 124*DPR;
+      for(let i=0;i<parts.length;i++){ const p=parts[i]; p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0||p.x>w)p.vx*=-1; if(p.y<0||p.y>h)p.vy*=-1;
+        for(let j=i+1;j<parts.length;j++){ const q=parts[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.hypot(dx,dy);
+          if(d<link){ ctx.strokeStyle="rgba("+c+","+(1-d/link)*.15+")"; ctx.lineWidth=DPR*.6; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); } }
+        ctx.fillStyle="rgba("+c+",.65)"; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      raf=requestAnimationFrame(tick);
+    }
+    resize(); init(); tick();
+    const onR=()=>{resize();init();}; addEventListener("resize",onR);
+    return ()=>{ cancelAnimationFrame(raf); removeEventListener("resize",onR); };
+  },[]);
+  return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10 opacity-70" />;
+}
+
+/* ========== GSAP 滚动叙事：扫描 [data-anim] 统一接管 ========== */
+function useCinematic(){
+  useEffect(()=>{
+    if(!GSAP_OK){ document.documentElement.classList.add("no-gsap"); return; }
+    let ctx;
+    const id = setTimeout(()=>{
+      ctx = gsap.context(()=>{
+        // 进场：先 set 初始态，再用 ScrollTrigger.create + onEnter 播放。
+        // 关键：用 onEnter 回调（而非 gsap.from(...,{scrollTrigger}})），
+        // 这样「加载时就已在视口里」的首屏元素，会在 create/refresh 时立即触发播放，
+        // 不会像 from() 那样卡在 opacity:0（GSAP ScrollTrigger 的经典首屏坑）。
+        gsap.utils.toArray("[data-anim]").forEach(el=>{
+          gsap.set(el, {opacity:1});   // 解除 CSS 占位 opacity:0；关键：stagger 的父容器靠这行恢复可见（否则父 opacity:0 会把子卡片整组乘没）
+          const type = el.dataset.anim;
+          const targets = type==="stagger" ? Array.from(el.children) : el;
+          const initial = type==="zoom" ? {opacity:0, scale:.84}
+            : type==="blur" ? {opacity:0, filter:"blur(16px)", y:22}
+            : {opacity:0, y:58};                       // fade-up / stagger
+          gsap.set(targets, initial);
+          ScrollTrigger.create({
+            trigger: el, start:"top 88%", once:true,
+            onEnter: ()=>gsap.to(targets, {opacity:1, y:0, scale:1, filter:"blur(0px)",
+              duration:1, ease:"power3.out", stagger: type==="stagger"?0.13:0, overwrite:"auto"})
+          });
+        });
+        gsap.utils.toArray("[data-parallax]").forEach(el=>{ const a=parseFloat(el.dataset.parallax)||-18; gsap.to(el,{yPercent:a,ease:"none",scrollTrigger:{trigger:el,start:"top bottom",end:"bottom top",scrub:true}}); });
+        ScrollTrigger.refresh();
+      });
+    }, 150);
+    return ()=>{ clearTimeout(id); if(ctx) ctx.revert(); };
+  },[]);
+}
+
+/* 逐字翻入大标题 */
+function SplitText({ text, className="", delay=0 }){
+  const ref=useRef(null);
+  useEffect(()=>{ if(!GSAP_OK||!ref.current) return;
+    const chars=ref.current.querySelectorAll(".ch");
+    gsap.set(chars,{yPercent:120,opacity:0,rotateX:-80});
+    const t=setTimeout(()=>gsap.to(chars,{yPercent:0,opacity:1,rotateX:0,duration:.85,stagger:.04,ease:"back.out(1.6)",delay,overwrite:"auto"}),160);
+    return ()=>clearTimeout(t);
+  },[]);
+  return <span ref={ref} className={className} style={{display:"inline-block",perspective:"600px"}}>
+    {Array.from(text).map((c,i)=><span key={i} className="ch" style={{display:"inline-block",whiteSpace:"pre"}}>{c}</span>)}
+  </span>;
+}
+
+/* 3D 倾斜卡片 */
+function TiltCard({ children, className="", max=9 }){
+  const ref=useRef(null);
+  const move=e=>{ const el=ref.current; if(!el) return; const r=el.getBoundingClientRect();
+    const px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+    el.style.transform="perspective(900px) rotateY("+(px*max)+"deg) rotateX("+(-py*max)+"deg) translateZ(0)"; };
+  const leave=()=>{ if(ref.current) ref.current.style.transform="perspective(900px) rotateY(0deg) rotateX(0deg)"; };
+  return <div ref={ref} onMouseMove={move} onMouseLeave={leave} className={"tilt "+className}>{children}</div>;
+}
+
+/* 磁吸按钮 */
+function MagneticButton({ children, className="", href="#", onClick }){
+  const ref=useRef(null);
+  const move=e=>{ const el=ref.current; if(!el) return; const r=el.getBoundingClientRect();
+    el.style.transform="translate("+((e.clientX-r.left-r.width/2)*.3)+"px,"+((e.clientY-r.top-r.height/2)*.4)+"px)"; };
+  const leave=()=>{ if(ref.current) ref.current.style.transform="translate(0,0)"; };
+  return <a ref={ref} href={href} onClick={onClick} onMouseMove={move} onMouseLeave={leave}
+    className={"inline-flex items-center gap-2 transition-transform duration-200 ease-out "+className}>{children}</a>;
+}
+
+/* 数字滚动（进视口触发一次）*/
+function CountUp({ value, duration=1500, className="" }){
+  const m=String(value).match(/^(\D*)([\d.]+)(.*)$/);
+  const ref=useRef(null), started=useRef(false), [n,setN]=useState(0);
+  const target=m?parseFloat(m[2]):0, dec=(m&&m[2].includes("."))?m[2].split(".")[1].length:0;
+  useEffect(()=>{ const el=ref.current; if(!el||!m) return;
+    const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting&&!started.current){ started.current=true; const t0=performance.now();
+      const tick=now=>{ const p=Math.min((now-t0)/duration,1),e2=1-Math.pow(1-p,3); setN(target*e2); if(p<1)requestAnimationFrame(tick); else setN(target); };
+      requestAnimationFrame(tick); io.unobserve(el);
+    }}),{threshold:.5}); io.observe(el); return ()=>io.disconnect();
+  },[]);
+  if(!m) return <span ref={ref} className={className}>{value}</span>;
+  return <span ref={ref} className={className}>{m[1]}{n.toFixed(dec)}{m[3]}</span>;
+}
+
+/* ========== 自动巡演 ========== */
+function useAutoplay(){
+  const [playing,setPlaying]=useState(false);
+  const st=useRef({cancel:false,raf:0});
+  function smoothTo(y,dur){ return new Promise(res=>{ const sy=window.scrollY,dist=y-sy,t0=performance.now();
+    const step=now=>{ if(st.current.cancel){res();return;} const p=Math.min((now-t0)/dur,1),e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+      window.scrollTo(0,sy+dist*e); if(p<1)st.current.raf=requestAnimationFrame(step); else res(); };
+    st.current.raf=requestAnimationFrame(step); }); }
+  const wait=ms=>new Promise(r=>{ const id=setInterval(()=>{ if(st.current.cancel){clearInterval(id);r();} },120); setTimeout(()=>{clearInterval(id);r();},ms); });
+  async function play(){
+    setPlaying(true); st.current.cancel=false;
+    const scenes=Array.from(document.querySelectorAll("section[data-scene]"));
+    await smoothTo(0,500);
+    for(const s of scenes){ if(st.current.cancel)break;
+      await smoothTo(Math.max(0,s.offsetTop-10),1100); if(st.current.cancel)break; await wait(2700); }
+    setPlaying(false);
+  }
+  function stop(){ st.current.cancel=true; cancelAnimationFrame(st.current.raf); setPlaying(false); }
+  return { playing, play, stop };
+}
+function AutoplayBar({ ap }){
+  return <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+    <div className="glass flex items-center gap-3 rounded-full border border-line px-4 py-2.5 shadow-2xl">
+      <button onClick={()=>ap.playing?ap.stop():ap.play()}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-c1 to-c2 text-white shadow-lg transition-transform hover:scale-105">
+        <Icon name={ap.playing?"Pause":"Play"} size={18} /></button>
+      <div className="pr-1.5">
+        <p className="text-xs font-semibold text-ink">{ap.playing?"巡演中…":"自动巡演"}</p>
+        <p className="text-[10px] text-muted">{ap.playing?"再点暂停":"点一下自动播放"}</p>
+      </div>
+    </div>
+  </div>;
+}
+
+function ThemeToggle(){
+  const { theme, toggle } = useContext(ThemeCtx);
+  return <button onClick={toggle} aria-label="切换深浅色" title="切换深浅色"
+    className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ink/10 hover:text-c1">
+    <Icon name={theme==="dark"?"Sun":"Moon"} size={18} /></button>;
+}
+function NavBar({ brand, nav }){
+  const [p,setP]=useState(0),[s,setS]=useState(false);
+  useEffect(()=>{ let raf=0; const on=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{ const h=document.documentElement,max=h.scrollHeight-h.clientHeight; setP(max>0?(h.scrollTop/max)*100:0); setS(h.scrollTop>20);});};
+    addEventListener("scroll",on,{passive:true}); on(); return ()=>removeEventListener("scroll",on); },[]);
+  return <header className={"fixed inset-x-0 top-0 z-50 transition-all duration-300 "+(s?"glass border-b border-line":"")}>
+    <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
+      <a href="#top" className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-c1 to-c2 text-white shadow-lg"><Icon name="Clapperboard" size={19} /></span>
+        <span className="text-sm font-bold tracking-wide text-ink">{brand}</span>
+      </a>
+      <div className="flex items-center gap-1">
+        <nav className="mr-1 hidden items-center gap-0.5 lg:flex">
+          {nav.map(n=><a key={n.id} href={"#"+n.id} className="rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-ink">{n.label}</a>)}
+        </nav>
+        <ThemeToggle />
+      </div>
+    </div>
+    <div className="h-0.5 w-full"><div className="h-full bg-gradient-to-r from-c1 via-c2 to-c3 transition-[width] duration-150" style={{width:p+"%"}} /></div>
+  </header>;
+}
+
+/* ====================================================================
+   §数据区 —— 改这里
+   ==================================================================== */
+const BRAND = "CINEMATIC";
+const NAV = [
+  { id:"stats", label:"数据" },
+  { id:"features", label:"亮点" },
+  { id:"showcase", label:"展示" },
+  { id:"closing", label:"结语" },
+];
+const HERO = {
+  badge: "下一代展示体验",
+  titleLines: ["让每一次展示", "都像一场发布会"],   // 逐字翻入
+  grad: "电影感 · 动效 · 沉浸式",
+  desc: "滚动到哪，画面就活到哪。粒子、视差、逐字标题、自动巡演——把普通内容，变成让人挪不开眼的演示。",
+};
+const STATS = [
+  { icon:"Zap", value:"60fps", label:"丝滑动效" },
+  { icon:"MousePointerClick", value:"1 键", label:"自动巡演" },
+  { icon:"Sparkles", value:"100%", label:"双击即开" },
+  { icon:"Layers", value:"6+", label:"炫酷组件" },
+];
+const FEATURES = [
+  { icon:"Film", title:"电影感叙事", desc:"GSAP ScrollTrigger 驱动，每一屏都是一个分镜，戏剧性进场。" },
+  { icon:"Wand2", title:"满屏特效", desc:"粒子光网、流光文字、3D 倾斜、视差光晕，视觉冲击拉满。" },
+  { icon:"PlayCircle", title:"一键巡演", desc:"点播放，页面自动匀速滚 + 动画依次播，你只管对着镜头讲。" },
+];
+const SHOWCASE = {
+  kicker: "Immersive",
+  title: "把重点，放进光里",
+  desc: "大图配视差、Ken Burns 缓缓推近、文字随滚动浮现——观众的注意力，被你牢牢牵住。",
+  img: "",   // 留空用渐变占位；填图片 URL（http 或 file://）即用真图 + Ken Burns
+};
+const BAR_DATA = [
+  { name:"传统静态页", value:32 }, { name:"加点动画", value:58 }, { name:"电影感展示", value:94 },
+];
+const CLOSING = {
+  title: "现在，轮到你的内容登场",
+  desc: "把任意一段文字丢进来，几分钟后，它就是一支可以直接录屏的大片。",
+  cta: "开始制作",
+};
+
+/* ====================================================================
+   §分镜 Scene —— 每个 section 加 data-scene 才会被自动巡演收录
+   ==================================================================== */
+function Hero(){
+  return <section id="top" data-scene className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 pt-16">
+    <ParticleField />
+    <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="float absolute left-[12%] top-[24%] h-72 w-72 rounded-full bg-c1/20 blur-3xl" />
+      <div className="float absolute right-[14%] top-[30%] h-80 w-80 rounded-full bg-c2/20 blur-3xl" style={{animationDelay:"2.5s"}} />
+      <div className="spin-slow absolute left-1/2 top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-c2/10" />
+    </div>
+    <div className="mx-auto max-w-4xl text-center">
+      <span className="glass inline-flex items-center gap-2 rounded-full border border-c1/30 px-4 py-1.5 text-xs font-medium tracking-wider text-c1"><Icon name="Sparkles" size={14} /> {HERO.badge}</span>
+      <h1 className="mt-7 text-4xl font-black leading-[1.08] tracking-tight text-ink sm:text-6xl md:text-7xl">
+        <span className="block"><SplitText text={HERO.titleLines[0]} /></span>
+        <span className="mt-1 block grad-text" data-anim="blur">{HERO.titleLines[1]}</span>{/* 渐变标题不要套 SplitText：grad-text 的 background-clip:text 不作用到拆出的子 span，会整行透明消失 */}
+      </h1>
+      <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink2 sm:text-lg" data-anim="fade-up">{HERO.desc}</p>
+      <div className="mt-9 flex items-center justify-center" data-anim="fade-up">
+        <MagneticButton href="#stats" className="rounded-full bg-gradient-to-r from-c1 to-c2 px-7 py-3.5 text-sm font-bold text-white shadow-xl neon">
+          <Icon name="ArrowDown" size={16} /> 向下看
+        </MagneticButton>
+      </div>
+    </div>
+    <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+      <div className="flex h-9 w-6 items-start justify-center rounded-full border-2 border-muted/40 p-1"><span className="scroll-dot h-1.5 w-1.5 rounded-full bg-c1" /></div>
+    </div>
+  </section>;
+}
+
+function Stats(){
+  return <section id="stats" data-scene className="relative flex min-h-screen items-center px-5 sm:px-8">
+    <div className="mx-auto w-full max-w-6xl">
+      <p className="mb-3 text-center font-mono text-sm tracking-widest text-c1" data-anim="fade-up">// BY THE NUMBERS</p>
+      <h2 className="mb-16 text-center text-3xl font-black tracking-tight text-ink sm:text-5xl" data-anim="fade-up">数字会说话</h2>
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4" data-anim="stagger">
+        {STATS.map((s,i)=><div key={i} className="glass rounded-3xl border border-line p-7 text-center neon">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-c1/20 to-c2/20 text-c1"><Icon name={s.icon} size={24} /></span>
+          <p className="mt-5 bg-gradient-to-r from-c1 to-c2 bg-clip-text text-4xl font-black text-transparent sm:text-5xl"><CountUp value={s.value} /></p>
+          <p className="mt-2 text-sm text-muted">{s.label}</p>
+        </div>)}
+      </div>
+    </div>
+  </section>;
+}
+
+function Features(){
+  return <section id="features" data-scene className="relative flex min-h-screen items-center px-5 sm:px-8">
+    <div className="mx-auto w-full max-w-6xl">
+      <p className="mb-3 text-center font-mono text-sm tracking-widest text-c2" data-anim="fade-up">// WHAT MAKES IT POP</p>
+      <h2 className="mb-16 text-center text-3xl font-black tracking-tight text-ink sm:text-5xl" data-anim="fade-up">凭什么<span className="grad-text">炫</span></h2>
+      <div className="grid gap-6 md:grid-cols-3" data-anim="stagger">
+        {FEATURES.map((f,i)=><TiltCard key={i} className="glass h-full rounded-3xl border border-line p-8 neon">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-c1 to-c2 text-white shadow-lg"><Icon name={f.icon} size={26} /></span>
+          <h3 className="mt-6 text-xl font-bold text-ink">{f.title}</h3>
+          <p className="mt-3 text-sm leading-relaxed text-muted">{f.desc}</p>
+        </TiltCard>)}
+      </div>
+    </div>
+  </section>;
+}
+
+function Showcase(){
+  return <section id="showcase" data-scene className="relative flex min-h-screen items-center overflow-hidden px-5 sm:px-8">
+    <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+      <div>
+        <p className="mb-3 font-mono text-sm tracking-widest text-c3" data-anim="fade-up">// {SHOWCASE.kicker}</p>
+        <h2 className="text-3xl font-black leading-tight tracking-tight text-ink sm:text-5xl" data-anim="fade-up">{SHOWCASE.title}</h2>
+        <p className="mt-5 max-w-md text-base leading-relaxed text-ink2" data-anim="fade-up">{SHOWCASE.desc}</p>
+      </div>
+      <div data-anim="zoom">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line neon">
+          {SHOWCASE.img
+            ? <img src={SHOWCASE.img} alt="" className="ken-burns h-full w-full object-cover" />
+            : <div className="ken-burns h-full w-full bg-gradient-to-br from-c1/40 via-c2/30 to-c3/40" />}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg/60 to-transparent" />
+          <div className="absolute bottom-5 left-5 flex items-center gap-2 text-xs font-medium text-white/90">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur"><Icon name="Image" size={14} /></span>
+            换成你的图，自动 Ken Burns 缓缓推近
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>;
+}
+
+function Charts(){
+  const P=usePalette();
+  return <section id="charts" data-scene className="relative flex min-h-screen items-center px-5 sm:px-8">
+    <div className="mx-auto w-full max-w-4xl">
+      <p className="mb-3 text-center font-mono text-sm tracking-widest text-c1" data-anim="fade-up">// THE PROOF</p>
+      <h2 className="mb-14 text-center text-3xl font-black tracking-tight text-ink sm:text-5xl" data-anim="fade-up">效果，肉眼可见</h2>
+      <div className="glass rounded-3xl border border-line p-6 neon sm:p-9" data-anim="blur">
+        <p className="mb-2 text-lg font-bold text-ink">观众停留意愿（示意评分）</p>
+        <p className="mb-6 text-xs text-faint">主观示意 · 非实测数据 · 满分 100</p>
+        {RECHARTS_OK ? <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={BAR_DATA} layout="vertical" margin={{top:4,right:40,bottom:4,left:8}}>
+            <defs><linearGradient id="gb" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor={P.c1} /><stop offset="100%" stopColor={P.c2} /></linearGradient></defs>
+            <CartesianGrid horizontal={false} stroke={P.grid} strokeDasharray="3 3" />
+            <XAxis type="number" tick={{fill:P.axis,fontSize:12}} axisLine={false} tickLine={false} domain={[0,100]} />
+            <YAxis type="category" dataKey="name" width={92} tick={{fill:P.axis2,fontSize:13}} axisLine={false} tickLine={false} />
+            <Tooltip cursor={{fill:"rgba(167,139,250,.08)"}} contentStyle={{background:"rgb(var(--surface))",border:"1px solid rgb(var(--border))",borderRadius:12,color:"rgb(var(--ink))"}} />
+            <Bar dataKey="value" radius={[0,10,10,0]} fill="url(#gb)" isAnimationActive animationDuration={1200}>
+              <LabelList dataKey="value" position="right" fill={P.axis2} fontSize={13} fontWeight={700} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer> : <div className="py-16 text-center text-muted"><Icon name="WifiOff" size={26} className="mx-auto text-c1" /><p className="mt-3 text-sm">图表需联网加载</p></div>}
+      </div>
+    </div>
+  </section>;
+}
+
+function Closing({ onPlay }){
+  return <section id="closing" data-scene className="relative flex min-h-screen items-center justify-center overflow-hidden px-5">
+    <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="float absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-c2/18 blur-3xl" />
+    </div>
+    <div className="mx-auto max-w-3xl text-center">
+      <h2 className="text-4xl font-black leading-tight tracking-tight text-ink sm:text-6xl" data-anim="zoom"><span className="grad-text">{CLOSING.title}</span></h2>
+      <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-ink2 sm:text-lg" data-anim="fade-up">{CLOSING.desc}</p>
+      <div className="mt-10 flex items-center justify-center" data-anim="fade-up">
+        <MagneticButton onClick={e=>{e.preventDefault(); onPlay&&onPlay();}} className="cursor-pointer rounded-full bg-gradient-to-r from-c1 via-c2 to-c3 px-8 py-4 text-base font-bold text-white shadow-2xl neon">
+          <Icon name="PlayCircle" size={20} /> {CLOSING.cta}
+        </MagneticButton>
+      </div>
+    </div>
+  </section>;
+}
+
+function Footer(){
+  return <footer className="relative border-t border-line py-10 text-center">
+    <div className="flex items-center justify-center gap-2 text-ink">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-c1 to-c2 text-white"><Icon name="Clapperboard" size={16} /></span>
+      <span className="font-bold">{BRAND}</span>
+    </div>
+    <p className="mt-4 text-xs text-faint">图表/数据为示意，非实测 · {new Date().getFullYear()}</p>
+  </footer>;
+}
+
+function App(){
+  const [theme,setTheme]=useState(()=>{ try{ return document.documentElement.dataset.theme||"dark"; }catch(e){ return "dark"; } });
+  const toggle=()=>setTheme(prev=>{ const next=prev==="dark"?"light":"dark"; try{ document.documentElement.dataset.theme=next; localStorage.setItem("cine-theme",next); }catch(e){} return next; });
+  useCinematic();
+  const ap=useAutoplay();
+  return <ThemeCtx.Provider value={{theme,toggle}}>
+    <div className="theme-tween min-h-screen bg-bg text-ink selection:bg-c2/30">
+      <NavBar brand={BRAND} nav={NAV} />
+      <main>
+        <Hero />
+        <Stats />
+        <Features />
+        <Showcase />
+        <Charts />
+        <Closing onPlay={ap.play} />
+      </main>
+      <Footer />
+      <AutoplayBar ap={ap} />
+    </div>
+  </ThemeCtx.Provider>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
