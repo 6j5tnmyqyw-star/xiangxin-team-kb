@@ -61,7 +61,15 @@ metadata:
   4. **抬头 / 落款写全**（呈送对象 · 提案人 · 日期），落款身份要对；对外提案**先给祥书审再发**。
   5. 对外正式提案优先出 **PDF**（飞书可在线预览、好转发）：HTML→headless Chrome（`--headless --no-pdf-header-footer --print-to-pdf`，logo base64 内联保证自包含），章节标题块加 `break-inside/after:avoid` 防跨页孤儿。
 
-### 3. 动效 + 讲解动画 + 交互演示（v1.3 强化）
+### 3. 动效 + 讲解动画 + 交互演示（v1.5 强化）
+
+**动效升级包（v1.5，template-demo 已内置，演示/流程类页面默认全用上，配方见 cookbook 十二）**：
+- **流动连线**（`.wire.live` 自带电流流动）· **节点弹跳点亮**（SVG rect 用 `class="box"`）· **呼吸灯**（`.lamp.live`）
+- **移动小球**（`#pkt` translateX 沿线跑 = 包裹/更新"在路上"的实体感，讲传输/流程必加）
+- **顺序播放器 `player()`**（逐节点点亮+同步解说+onDone 回调；**首屏 tab 加 setTimeout 自动播一遍**，打开即演示）
+- **彩纸 `confetti()`**（闭环/完成时刻撒一把，收尾仪式感）· **交错入场**（`.panel.active` 自动 rise）
+- 全部遵守 `prefers-reduced-motion`；⚠️ browser-harness 验动画先查 `document.visibilityState`——后台标签计时器被节流会误判动画没跑（2026-06-10 踩过）
+
 **基础动效**（每页标配）：
 - 滚动**淡入 + 上移**（IntersectionObserver + CSS，**不用 Framer Motion**，单文件更稳）
 - 卡片 / 按钮 hover：`hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-out`

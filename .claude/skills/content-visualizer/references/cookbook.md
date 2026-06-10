@@ -249,3 +249,23 @@ swA.onclick=()=>{ a^=1; render(); };  render();
 
 ### 7.4 原生版交付与验证
 零依赖原生版**免内联**，直接 `python3 scripts/deploy-push.py <页> "<标题>"` 发妙搭+推送（脚本检测无 CDN 自动跳过内联）。验证 = browser-harness 实开**逐个交互实拨**看输出对（香农就是 AND/OR/NOT + 半加器逐一拨验过），别只截图看静态。
+
+## 十二、动效升级包（v1.5，2026-06-10 实战沉淀自「GitHub协作全链路」页）
+
+template-demo.html 已内置以下全部 CSS/JS，直接用 class 和函数即可：
+
+| 效果 | 用法 | 适用 |
+|---|---|---|
+| 流动连线 | 线加 `class="wire"`，点亮时 `classList.add('live')` | 流程/管道/数据流 |
+| 节点弹跳点亮 | SVG rect 加 `class="box"` → add('live') | 流程节点、架构框 |
+| 呼吸灯 | `class="lamp"` → add('live') | 终点状态/结果 |
+| 移动小球 | `<circle id="pkt" style="transition:transform 1s linear">`，JS 设 `translateX(站点坐标差px)` | 包裹/消息/更新在路上 |
+| 顺序播放器 | `player(seq, texts, textEl, btnPlay, btnReset, ms, onDone)` 返回 `{play,reset}` | 任何"一步步讲" |
+| 彩纸 | `confetti(容器DOM)` | 完成/闭环/答对时刻 |
+| 交错入场 | `.panel.active` 下 `.lab/table` 自动 rise；pill/check 可加 nth-child 延迟 | tab 切换 |
+| 自动演示 | `setTimeout(()=>p.play(), 700)` 仅首屏 tab | 打开即动，讲解开场 |
+
+踩坑：
+- SVG rect 做 scale 动画必须 `transform-box:fill-box; transform-origin:center`，否则绕左上角飞
+- browser-harness 验动画：先 `js("document.visibilityState")`，hidden = 后台节流，setTimeout 全变慢，别误判逻辑坏了
+- 彩纸容器要 `position:relative; overflow:hidden`（confetti() 已自动设）

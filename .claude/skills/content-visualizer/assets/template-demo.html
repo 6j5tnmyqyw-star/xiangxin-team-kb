@@ -86,10 +86,27 @@
   /* —— SVG 电路/连线 —— */
   svg{display:block;margin:6px auto;max-width:100%;height:auto}
   .wire{stroke:var(--wire);stroke-width:5;fill:none;stroke-linecap:round;transition:.3s}
-  .wire.live{stroke:var(--accent);filter:drop-shadow(0 0 5px var(--accent))}
+  .wire.live{stroke:var(--accent);filter:drop-shadow(0 0 5px var(--accent));
+    stroke-dasharray:10 7;animation:flow .8s linear infinite}   /* 电流流动感 */
+  @keyframes flow{to{stroke-dashoffset:-17}}
   .node{fill:var(--text-soft)}
   .lamp{fill:var(--off);stroke:var(--wire);stroke-width:3}
-  .lamp.live{fill:var(--on);filter:drop-shadow(0 0 9px var(--on))}
+  .lamp.live{fill:var(--on);filter:drop-shadow(0 0 9px var(--on));animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{filter:drop-shadow(0 0 5px var(--on))}50%{filter:drop-shadow(0 0 18px var(--on))}}
+  /* SVG 矩形节点点亮弹跳：给节点 rect 加 class="box"，点亮时 classList.add('live') */
+  .box{fill:var(--pill);stroke:var(--line);stroke-width:1.5;transition:.35s;transform-box:fill-box;transform-origin:center}
+  .box.live{fill:color-mix(in srgb,var(--accent) 16%,var(--card));stroke:var(--accent);
+    animation:pop .5s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+  /* 列表/卡片交错入场（tab 切换时自动触发） */
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .panel.active .lab,.panel.active table{animation:rise .5s both}
+  /* 彩纸（配合 JS confetti() 用在"完成/闭环"时刻） */
+  .confetti{position:absolute;width:9px;height:9px;border-radius:2px;pointer-events:none;
+    animation:burst 1.15s cubic-bezier(.2,.8,.4,1) forwards}
+  @keyframes burst{0%{opacity:1;transform:translate(0,0) rotate(0)}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(540deg)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   .note{font-size:13px;color:var(--text-soft);border-left:3px solid var(--line);padding-left:14px;margin-top:32px}
 </style>
 </head>
@@ -171,6 +188,41 @@
   const root=document.documentElement,saved=localStorage.getItem('theme');
   if(saved)root.dataset.theme=saved;
   themeBtn.onclick=()=>{const n=root.dataset.theme==='dark'?'light':'dark';root.dataset.theme=n;localStorage.setItem('theme',n);};
+
+  /* ── 通用工具（按需取用，没用到可删）──
+     player(): 顺序点亮播放器 —— seq=[{sel:'.b1'},{sel:'.m1'}...] 依次 addClass('live')，
+               texts={start,steps:[]} 同步解说，onDone 播完回调（如 confetti）。
+     confetti(): 在容器中心炸一把彩纸，用在"完成/闭环/全对"时刻。
+     移动小球：给 SVG 加 <circle id="pkt" style="transition:transform 1s linear"/>，
+               JS 设 pkt.style.transform='translateX(Npx)' 即沿线平移（站点坐标差）。 */
+  function player(seq,texts,textEl,btnPlay,btnReset,interval,onDone){
+    let timer=null;
+    function reset(){clearTimeout(timer);timer=null;
+      seq.forEach(s=>document.querySelectorAll(s.sel).forEach(e=>e.classList.remove(s.cls||'live')));
+      document.getElementById(textEl).textContent=texts.start;}
+    function play(){reset();let i=0;
+      (function tick(){if(i>=seq.length){onDone&&onDone();return;}
+        const s=seq[i];document.querySelectorAll(s.sel).forEach(e=>e.classList.add(s.cls||'live'));
+        document.getElementById(textEl).textContent=texts.steps[i];
+        i++;timer=setTimeout(tick,interval||1000);})();}
+    if(document.getElementById(btnPlay))document.getElementById(btnPlay).onclick=play;
+    if(btnReset&&document.getElementById(btnReset))document.getElementById(btnReset).onclick=reset;
+    return {play,reset};
+  }
+  function confetti(container){
+    const colors=['#c2410c','#fbbf24','#16a34a','#2563eb','#db2777'];
+    container.style.position='relative';container.style.overflow='hidden';
+    const r=container.getBoundingClientRect();
+    for(let i=0;i<26;i++){
+      const d=document.createElement('div');d.className='confetti';
+      d.style.background=colors[i%colors.length];
+      d.style.left=(r.width/2)+'px';d.style.top=(r.height*0.45)+'px';
+      const ang=Math.PI*2*i/26, dist=70+(i*53)%110;
+      d.style.setProperty('--dx',Math.cos(ang)*dist+'px');
+      d.style.setProperty('--dy',Math.sin(ang)*dist-40+'px');
+      container.appendChild(d);setTimeout(()=>d.remove(),1300);
+    }
+  }
 
   /* ── 区块1：交互演示 —— 改这里的逻辑就行 ── */
   let a=0;
