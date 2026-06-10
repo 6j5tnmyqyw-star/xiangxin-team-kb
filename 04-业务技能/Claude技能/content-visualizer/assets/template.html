@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<!--
+  ====================================================================
+  内容可视化展示页 · 骨架模板（content-visualizer skill）v1.1
+  用法：复制本文件 → 改下面 §数据区 的 mock 数据 + 增删 Section → 实开验证
+  技术栈：React18 + Tailwind + Recharts2.12.7 + Lucide + Babel（全 CDN，双击即开）
+  ────────────────────────────────────────────────────────────────
+  内置交互（开箱即用，一般不用改）：
+    · 明暗主题一键切换（导航栏右上按钮，记忆选择，图表色自动跟随）
+    · 数字滚动 CountUp（HERO stat 进视口从 0 滚到目标值）
+    · Tab 切换区块、滚动淡入、顶部进度条、回到顶部浮动按钮
+  ────────────────────────────────────────────────────────────────
+  铁律：
+    · Recharts 只能用 2.12.7 UMD（新版删了 UMD 会 404 整页 blank）
+    · 配色走 CSS 变量（RGB 通道）+ Tailwind rgb(var(--x)/<alpha-value>)，
+      改主题只改 :root / html[data-theme=dark] 的变量，组件类名不动
+    · 卡片底色用 bg-card（不要写 bg-white，否则深色模式不跟随）
+  ====================================================================
+-->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>可视化展示 · 模板</title>
+
+<!-- 防闪烁：挂载前先按记忆设好主题 -->
+<script>
+  (function(){ try{ var t=localStorage.getItem('cv-theme'); if(t) document.documentElement.dataset.theme=t; }catch(e){} })();
+</script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // —— 配色走 CSS 变量（见 <style> 的 :root）。这里把 Tailwind 颜色指向变量，
+  //    用 rgb(var(--x) / <alpha-value>) 让 bg-clay/10、text-ink/70 等透明度类正常工作。——
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: {
+        sans: ['-apple-system','BlinkMacSystemFont','"PingFang SC"','"Microsoft YaHei"','sans-serif'],
+        serif: ['"Iowan Old Style"','Georgia','"Times New Roman"','"Songti SC"','serif'],
+      },
+      colors: {
+        cream:'rgb(var(--cream) / <alpha-value>)',
+        paper:'rgb(var(--paper) / <alpha-value>)',
+        card:'rgb(var(--card) / <alpha-value>)',
+        line:'rgb(var(--line) / <alpha-value>)',
+        line2:'rgb(var(--line2) / <alpha-value>)',
+        ink:'rgb(var(--ink) / <alpha-value>)',
+        ink2:'rgb(var(--ink2) / <alpha-value>)',
+        muted:'rgb(var(--muted) / <alpha-value>)',
+        faint:'rgb(var(--faint) / <alpha-value>)',
+        clay:{
+          DEFAULT:'rgb(var(--clay) / <alpha-value>)',
+          600:'rgb(var(--clay-600) / <alpha-value>)',
+          700:'rgb(var(--clay-700) / <alpha-value>)',
+          300:'rgb(var(--clay-300) / <alpha-value>)',
+          100:'rgb(var(--clay-100) / <alpha-value>)',
+        },
+        good:'rgb(var(--good) / <alpha-value>)',
+        bad:'rgb(var(--bad) / <alpha-value>)',
+      },
+    } },
+  };
+</script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<script crossorigin src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  /* ===== 配色变量：RGB 通道（空格分隔），改主题只改这里 ===== */
+  :root{
+    --cream:240 238 230; --paper:250 249 245; --card:255 255 255;
+    --line:227 224 214; --line2:237 235 227;
+    --ink:31 30 29; --ink2:70 68 63; --muted:115 112 106; --faint:155 151 142;
+    --clay:217 119 87; --clay-600:194 97 63; --clay-700:168 79 50; --clay-300:232 164 143; --clay-100:246 231 223;
+    --good:92 122 63; --bad:179 80 60;
+    --grid:31 30 29;                 /* 网格线基色（浅底用深线）*/
+  }
+  html[data-theme="dark"]{
+    --cream:15 17 21; --paper:23 26 32; --card:27 31 38;
+    --line:42 47 56; --line2:34 38 46;
+    --ink:240 242 245; --ink2:201 207 216; --muted:148 158 173; --faint:107 115 128;
+    --clay:232 149 111; --clay-600:217 119 87; --clay-700:240 178 156; --clay-300:194 97 63; --clay-100:43 33 28;
+    --good:124 158 92; --bad:214 122 102;
+    --grid:255 255 255;              /* 深底用浅线 */
+  }
+
+  html { scroll-behavior: smooth; }
+  body { background-color: rgb(var(--cream)); transition: background-color .4s ease; }
+  section[id] { scroll-margin-top: 80px; }
+  ::-webkit-scrollbar { width: 11px; }
+  ::-webkit-scrollbar-track { background: rgb(var(--cream)); }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--clay-300)); border-radius: 8px; border: 2px solid rgb(var(--cream)); }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--clay)); }
+  .text-gradient { background: linear-gradient(118deg, rgb(var(--clay)) 0%, rgb(var(--clay-600)) 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+  .bg-grid { background-image: linear-gradient(to right, rgb(var(--grid) / 0.045) 1px, transparent 1px), linear-gradient(to bottom, rgb(var(--grid) / 0.045) 1px, transparent 1px); background-size:56px 56px; -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 100%); mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 40%,transparent 100%); }
+  @keyframes floatGlow { 0%,100%{transform:translate3d(0,0,0) scale(1);opacity:.55} 50%{transform:translate3d(0,-22px,0) scale(1.08);opacity:.8} }
+  .animate-glow { animation: floatGlow 9s ease-in-out infinite; }
+  .reveal { opacity:0; transform:translateY(32px); transition:opacity .7s ease-out,transform .7s ease-out; will-change:opacity,transform; }
+  .reveal.is-visible { opacity:1; transform:translateY(0); }
+  .recharts-wrapper:focus,.recharts-surface:focus { outline:none; }
+  /* 主题切换时让卡片/边框/文字平滑过渡（图表除外，避免重绘抖动）*/
+  .theme-tween, .theme-tween * { transition: background-color .4s ease, border-color .4s ease, color .4s ease; }
+</style>
+</head>
+<body class="font-sans antialiased text-ink">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, createContext, useContext } = React;
+
+// Recharts 兜底解构（未加载也不 blank 整页）
+const RC = (typeof Recharts !== "undefined" && Recharts) ? Recharts : {};
+const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } = RC;
+const RECHARTS_OK = !!BarChart;
+
+/* ========== 主题（图表色跟随）========== */
+// 图表用 JS 色值（SVG 不便用 CSS 变量做计算），按主题切换；页面其余走 Tailwind 变量类
+const PALETTE = {
+  light:{ clay:"#D97757", brown:"#B07D62", gold:"#C99A5B", grid:"#E3E0D6", axis:"#9B978E", axis2:"#46443F", cursor:"rgba(217,119,87,0.07)" },
+  dark: { clay:"#E8956F", brown:"#C99A7A", gold:"#D9B074", grid:"#2A2F38", axis:"#6B7280", axis2:"#9CA3AF", cursor:"rgba(232,149,111,0.10)" },
+};
+const ThemeCtx = createContext({ theme:"light", toggle:()=>{} });
+function usePalette(){ return PALETTE[useContext(ThemeCtx).theme] || PALETTE.light; }
+
+/* ========== 核心组件（一般不用改）========== */
+function getIconNode(name){ if(typeof lucide==="undefined"||!lucide) return null; return (lucide.icons||lucide)[name]||null; }
+function Icon({ name, size=22, className="", strokeWidth=2, style }){
+  const node = getIconNode(name);
+  if(!node) return <span className={className} style={{display:"inline-block",width:size,height:size,...style}} />;
+  const r=(c,i)=>{const[t,a,k]=c;return React.createElement(t,{key:i,...a},Array.isArray(k)?k.map(r):null)};
+  return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+    className={className} style={style} aria-hidden="true">{node.map(r)}</svg>;
+}
+function Reveal({ children, delay=0, className="", as:Tag="div" }){
+  const ref=useRef(null), [shown,setShown]=useState(false);
+  useEffect(()=>{ const el=ref.current; if(!el) return;
+    const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){setShown(true);io.unobserve(el)}}),{threshold:0.12,rootMargin:"0px 0px -8% 0px"});
+    io.observe(el); return ()=>io.disconnect(); },[]);
+  return <Tag ref={ref} className={`reveal ${shown?"is-visible":""} ${className}`} style={{transitionDelay:`${delay}ms`}}>{children}</Tag>;
+}
+// 数字滚动：value 可含前后缀（"90%" "3.2万" "Top 1" "24h"），进视口触发一次
+function CountUp({ value, duration=1400, className="" }){
+  const m = String(value).match(/^(\D*)([\d.]+)(.*)$/);
+  const ref=useRef(null), started=useRef(false), [n,setN]=useState(0);
+  const target = m ? parseFloat(m[2]) : 0;
+  const decimals = (m && m[2].includes(".")) ? m[2].split(".")[1].length : 0;
+  useEffect(()=>{ const el=ref.current; if(!el||!m) return;
+    const io=new IntersectionObserver(es=>es.forEach(e=>{
+      if(e.isIntersecting && !started.current){ started.current=true; const t0=performance.now();
+        const tick=now=>{ const p=Math.min((now-t0)/duration,1), eased=1-Math.pow(1-p,3);
+          setN(target*eased); if(p<1) requestAnimationFrame(tick); else setN(target); };
+        requestAnimationFrame(tick); io.unobserve(el);
+      }}),{threshold:0.4});
+    io.observe(el); return ()=>io.disconnect(); },[]);
+  if(!m) return <span ref={ref} className={className}>{value}</span>;
+  return <span ref={ref} className={className}>{m[1]}{n.toFixed(decimals)}{m[3]}</span>;
+}
+function ChartTooltip({ active, payload, label, suffix="" }){
+  if(!active||!payload||!payload.length) return null;
+  return <div className="rounded-xl border border-line bg-card px-4 py-3 shadow-xl">
+    <p className="text-sm font-medium text-ink">{label}</p>
+    {payload.map((p,i)=><p key={i} className="mt-1 text-sm"><span className="text-muted">{p.name}：</span>
+      <span className="font-semibold text-clay" style={(p.color && p.color[0]==="#")?{color:p.color}:undefined}>{p.value}{suffix}</span></p>)}
+  </div>;
+}
+function SectionHeader({ kicker, title, desc }){
+  return <Reveal className="mx-auto mb-14 max-w-3xl text-center">
+    <span className="font-serif text-base italic tracking-wide text-clay-700">{kicker}</span>
+    <h2 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h2>
+    {desc && <p className="mt-4 text-base leading-relaxed text-muted">{desc}</p>}
+  </Reveal>;
+}
+function ChartCard({ title, subtitle, icon, children }){
+  return <div className="h-full rounded-3xl border border-line bg-card p-6 shadow-sm transition-all duration-200 ease-out hover:border-clay/30 hover:shadow-lg sm:p-8">
+    <div className="mb-6 flex items-center gap-3">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay/10 text-clay ring-1 ring-inset ring-clay/20"><Icon name={icon} size={20} /></span>
+      <div><h3 className="text-lg font-semibold text-ink">{title}</h3><p className="text-xs tracking-wide text-faint">{subtitle}</p></div>
+    </div>
+    {children}
+  </div>;
+}
+// Tab 切换：tabs=[{key,label,icon,items:[{icon,title,desc}]}]
+function Tabs({ tabs }){
+  const [t,setT]=useState(0); const data=tabs[t]||{items:[]};
+  return <>
+    <div className="mb-10 flex flex-wrap justify-center gap-2.5">
+      {tabs.map((x,i)=><button key={x.key} onClick={()=>setT(i)}
+        className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 ${i===t?"border-clay bg-clay text-white":"border-line bg-card text-ink2 hover:border-clay/40"}`}>
+        <Icon name={x.icon} size={17} /> {x.label}</button>)}
+    </div>
+    <div key={t} className="reveal is-visible grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+      {data.items.map((it,i)=>
+        <div key={i} className="h-full rounded-3xl border border-line bg-card p-7 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:border-clay/40 hover:shadow-lg">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-clay/10 text-clay ring-1 ring-inset ring-clay/20"><Icon name={it.icon} size={22} /></span>
+          <h3 className="mt-5 text-lg font-bold text-ink">{it.title}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{it.desc}</p>
+        </div>)}
+    </div>
+  </>;
+}
+function ThemeToggle(){
+  const { theme, toggle } = useContext(ThemeCtx);
+  return <button onClick={toggle} aria-label="切换深浅色" title="切换深浅色"
+    className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors duration-200 hover:bg-ink/5 hover:text-clay">
+    <Icon name={theme==="dark"?"Sun":"Moon"} size={18} /></button>;
+}
+function NavBar({ nav, brand }){
+  const [progress,setProgress]=useState(0), [scrolled,setScrolled]=useState(false);
+  useEffect(()=>{ let raf=0; const on=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{
+    const h=document.documentElement, max=h.scrollHeight-h.clientHeight;
+    setProgress(max>0?(h.scrollTop/max)*100:0); setScrolled(h.scrollTop>24);});};
+    window.addEventListener("scroll",on,{passive:true}); on(); return ()=>window.removeEventListener("scroll",on); },[]);
+  return <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled?"border-b border-line bg-cream/85 backdrop-blur-md":"bg-transparent"}`}>
+    <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
+      <a href="#top" className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-clay/12 text-clay ring-1 ring-inset ring-clay/25"><Icon name="Sparkles" size={20} /></span>
+        <span className="text-sm font-semibold tracking-wide text-ink">{brand}</span>
+      </a>
+      <div className="flex items-center gap-1">
+        <nav className="hidden items-center gap-0.5 lg:flex">
+          {nav.map(n=><a key={n.id} href={`#${n.id}`} className="rounded-lg px-3 py-2 text-sm text-muted transition-colors duration-200 hover:bg-ink/5 hover:text-ink">{n.label}</a>)}
+        </nav>
+        <span className="mx-1 hidden h-5 w-px bg-line lg:block" />
+        <ThemeToggle />
+      </div>
+    </div>
+    <div className="h-0.5 w-full bg-transparent"><div className="h-full bg-gradient-to-r from-clay to-clay-300 transition-[width] duration-150 ease-out" style={{width:`${progress}%`}} /></div>
+  </header>;
+}
+function BackToTop(){
+  const [show,setShow]=useState(false);
+  useEffect(()=>{ const on=()=>setShow(window.scrollY>600); window.addEventListener("scroll",on,{passive:true}); on(); return ()=>window.removeEventListener("scroll",on); },[]);
+  return <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})} aria-label="回到顶部"
+    className={`fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-card text-clay shadow-lg transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl ${show?"opacity-100 translate-y-0":"pointer-events-none opacity-0 translate-y-3"}`}>
+    <Icon name="ArrowUp" size={20} /></button>;
+}
+
+/* ====================================================================
+   §数据区 —— 改这里：把示例数据换成你的内容
+   ==================================================================== */
+const BRAND = "可视化展示";
+const NAV = [
+  { id:"section1", label:"区块一" },
+  { id:"features", label:"分类" },
+  { id:"charts", label:"数据透视" },
+];
+const HERO = {
+  badge: "副标题 / 标签",
+  title: ["主标题，关键词用", "高亮"],   // [前文, 高亮词]
+  desc: "一句话说明这个页面讲什么。围绕核心信息展开，让读者一眼抓住重点。",
+};
+const HERO_STATS = [
+  { icon:"TrendingUp", value:"90%", label:"核心数据一句话说明", note:"来源/口径" },
+  { icon:"Users", value:"3.2万", label:"核心数据一句话说明", note:"来源/口径" },
+  { icon:"Clock", value:"24h", label:"核心数据一句话说明", note:"来源/口径" },
+  { icon:"Target", value:"Top 1", label:"核心数据一句话说明", note:"来源/口径" },
+];
+const CARDS = [
+  { icon:"Zap", title:"要点一", desc:"用一句话把这个要点讲清楚，别堆术语。" },
+  { icon:"Shield", title:"要点二", desc:"用一句话把这个要点讲清楚，别堆术语。" },
+  { icon:"Rocket", title:"要点三", desc:"用一句话把这个要点讲清楚，别堆术语。" },
+];
+const TABS = [
+  { key:"t1", label:"分类一", icon:"Layers", items:[
+    { icon:"Check", title:"条目 1-1", desc:"分类一下的具体条目说明。" },
+    { icon:"Check", title:"条目 1-2", desc:"分类一下的具体条目说明。" },
+    { icon:"Check", title:"条目 1-3", desc:"分类一下的具体条目说明。" },
+  ]},
+  { key:"t2", label:"分类二", icon:"Compass", items:[
+    { icon:"Star", title:"条目 2-1", desc:"分类二下的具体条目说明。" },
+    { icon:"Star", title:"条目 2-2", desc:"分类二下的具体条目说明。" },
+  ]},
+  { key:"t3", label:"分类三", icon:"Gift", items:[
+    { icon:"Heart", title:"条目 3-1", desc:"分类三下的具体条目说明。" },
+    { icon:"Heart", title:"条目 3-2", desc:"分类三下的具体条目说明。" },
+    { icon:"Heart", title:"条目 3-3", desc:"分类三下的具体条目说明。" },
+    { icon:"Heart", title:"条目 3-4", desc:"分类三下的具体条目说明。" },
+  ]},
+];
+const BAR_DATA = [
+  { name:"类别 A", value:45 }, { name:"类别 B", value:28 },
+  { name:"类别 C", value:17 }, { name:"类别 D", value:10 },
+];
+const RADAR_DATA = [
+  { dim:"维度一", 甲:90, 乙:60 }, { dim:"维度二", 甲:70, 乙:85 },
+  { dim:"维度三", 甲:60, 乙:95 }, { dim:"维度四", 甲:80, 乙:50 }, { dim:"维度五", 甲:75, 乙:70 },
+];
+const RADAR_SERIES = [ { key:"甲", name:"方案甲", tone:"clay" }, { key:"乙", name:"方案乙", tone:"gold" } ];
+
+/* ====================================================================
+   §页面区块 —— 增删 Section、调整布局
+   ==================================================================== */
+function Hero(){
+  return <section id="top" className="relative overflow-hidden bg-grid pt-32 pb-24 sm:pt-40 sm:pb-28">
+    <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="animate-glow absolute -top-20 left-1/4 h-96 w-96 rounded-full bg-clay/20 blur-3xl" />
+      <div className="animate-glow absolute top-10 right-1/4 h-80 w-80 rounded-full bg-clay-300/25 blur-3xl" style={{animationDelay:"3s"}} />
+    </div>
+    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <Reveal className="mx-auto max-w-4xl text-center">
+        <span className="inline-flex items-center gap-2 rounded-full border border-clay/25 bg-clay/8 px-4 py-1.5 text-xs font-medium tracking-wider text-clay-700"><Icon name="Sparkles" size={15} /> {HERO.badge}</span>
+        <h1 className="mt-7 text-4xl font-bold leading-tight tracking-tight text-ink sm:text-6xl">{HERO.title[0]}<span className="text-gradient">{HERO.title[1]}</span></h1>
+        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink2">{HERO.desc}</p>
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <a href="#section1" className="group inline-flex items-center gap-2 rounded-xl bg-clay px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:bg-clay-600 hover:shadow-lg">开始 <Icon name="ArrowRight" size={16} className="transition-transform duration-200 group-hover:translate-x-1" /></a>
+        </div>
+      </Reveal>
+      <div className="mx-auto mt-20 grid max-w-5xl grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+        {HERO_STATS.map((s,i)=><Reveal key={i} delay={i*90}>
+          <div className="group h-full rounded-2xl border border-line bg-card p-6 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:border-clay/40 hover:shadow-lg">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-clay/10 text-clay ring-1 ring-inset ring-clay/20"><Icon name={s.icon} size={22} /></span>
+            <p className="mt-5 text-3xl font-bold tracking-tight text-ink"><CountUp value={s.value} /></p>
+            <p className="mt-2 text-sm leading-snug text-muted">{s.label}</p>
+            <p className="mt-3 text-[11px] tracking-wide text-faint">{s.note}</p>
+          </div></Reveal>)}
+      </div>
+    </div>
+  </section>;
+}
+
+// 示例区块：卡片网格 + 一条 blockquote（金句提取范式）
+function Section1(){
+  return <section id="section1" className="border-t border-line py-20 sm:py-28">
+    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <SectionHeader kicker="Section One" title="区块标题" desc="区块的一句话说明。" />
+      <Reveal className="mx-auto mb-10 max-w-4xl">
+        <figure className="relative overflow-hidden rounded-3xl border border-line bg-card p-8 shadow-sm sm:p-12">
+          <div className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-clay to-clay-600" />
+          <Icon name="Quote" size={40} className="text-clay/35" />
+          <blockquote className="mt-4 text-2xl font-semibold leading-relaxed text-ink sm:text-3xl">把最重要的<span className="text-clay">那句结论</span>提到这里，做成大字金句。</blockquote>
+          <figcaption className="mt-5 text-base leading-relaxed text-muted">补充说明这句结论的背景或依据。</figcaption>
+        </figure>
+      </Reveal>
+      <div className="grid gap-5 md:grid-cols-3">
+        {CARDS.map((c,i)=><Reveal key={i} delay={i*100}>
+          <div className="h-full rounded-3xl border border-line bg-card p-7 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:border-clay/40 hover:shadow-lg">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-clay/10 text-clay ring-1 ring-inset ring-clay/20"><Icon name={c.icon} size={24} /></span>
+            <h3 className="mt-5 text-xl font-bold text-ink">{c.title}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted">{c.desc}</p>
+          </div></Reveal>)}
+      </div>
+    </div>
+  </section>;
+}
+
+// 示例区块：Tab 切换（适合并列分类）
+function Features(){
+  return <section id="features" className="border-t border-line bg-paper py-20 sm:py-28">
+    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <SectionHeader kicker="By Category" title="分类切换" desc="把并列的分类做成 Tab，点一下切一组内容。" />
+      <Reveal><Tabs tabs={TABS} /></Reveal>
+    </div>
+  </section>;
+}
+
+// 示例区块：两张图表（柱状 + 雷达），颜色随主题
+function Charts(){
+  const P = usePalette();
+  if(!RECHARTS_OK) return <section id="charts" className="border-t border-line py-20 sm:py-28"><div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <SectionHeader kicker="Data Insights" title="数据透视" desc="" />
+    <Reveal className="mx-auto max-w-xl rounded-3xl border border-line bg-card p-10 text-center text-muted shadow-sm"><Icon name="WifiOff" size={28} className="mx-auto text-clay" /><p className="mt-3">图表需联网加载，当前未加载图表库。</p></Reveal>
+  </div></section>;
+  return <section id="charts" className="border-t border-line py-20 sm:py-28">
+    <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <SectionHeader kicker="Data Insights" title="数据透视" desc="把数据讲成图。经验/示意数据记得在副标题标注。" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Reveal>
+          <ChartCard title="柱状图示例" subtitle="单色赤陶橙 · 单位 %" icon="BarChart3">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={BAR_DATA} layout="vertical" margin={{top:4,right:30,bottom:4,left:8}}>
+                <defs><linearGradient id="gC" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor={P.clay} stopOpacity={0.55} /><stop offset="100%" stopColor={P.clay} stopOpacity={1} /></linearGradient></defs>
+                <CartesianGrid horizontal={false} stroke={P.grid} strokeDasharray="3 3" />
+                <XAxis type="number" tick={{fill:P.axis,fontSize:12}} axisLine={false} tickLine={false} unit="%" />
+                <YAxis type="category" dataKey="name" width={80} tick={{fill:P.axis2,fontSize:13}} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{fill:P.cursor}} content={<ChartTooltip suffix="%" />} />
+                <Bar dataKey="value" name="占比" radius={[0,8,8,0]} fill="url(#gC)" isAnimationActive animationDuration={900}>
+                  <LabelList dataKey="value" position="right" formatter={v=>`${v}%`} fill={P.axis} fontSize={12} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Reveal>
+        <Reveal delay={120}>
+          <ChartCard title="雷达图示例" subtitle="邻近暖色 · 满分 100" icon="Radar">
+            <ResponsiveContainer width="100%" height={300}>
+              <RadarChart data={RADAR_DATA} outerRadius="72%">
+                <PolarGrid stroke={P.grid} />
+                <PolarAngleAxis dataKey="dim" tick={{fill:P.axis2,fontSize:13}} />
+                <PolarRadiusAxis angle={90} domain={[0,100]} tick={{fill:P.axis,fontSize:11}} axisLine={false} />
+                {RADAR_SERIES.map(s=><Radar key={s.key} name={s.name} dataKey={s.key} stroke={P[s.tone]} fill={P[s.tone]} fillOpacity={0.18} strokeWidth={2} isAnimationActive animationDuration={900} />)}
+                <Legend wrapperStyle={{paddingTop:12}} iconType="circle" formatter={v=><span style={{color:P.axis2,fontSize:13}}>{v}</span>} />
+                <Tooltip content={<ChartTooltip />} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Reveal>
+      </div>
+    </div>
+  </section>;
+}
+
+function Footer(){
+  return <footer className="border-t border-line bg-paper py-12">
+    <div className="mx-auto max-w-7xl px-5 text-center sm:px-8">
+      <div className="flex items-center justify-center gap-2.5 text-ink">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-clay/12 text-clay ring-1 ring-inset ring-clay/25"><Icon name="Sparkles" size={20} /></span>
+        <span className="font-semibold">{BRAND}</span>
+      </div>
+      <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-muted">内容来源 / 说明放这里。经验估算或示意数据务必注明，非官方统计。</p>
+      <p className="mt-6 text-xs text-faint">{new Date().getFullYear()}</p>
+    </div>
+  </footer>;
+}
+
+function App(){
+  const [theme,setTheme]=useState(()=>{ try{ return document.documentElement.dataset.theme||"light"; }catch(e){ return "light"; } });
+  const toggle=()=>setTheme(prev=>{ const next=prev==="dark"?"light":"dark";
+    try{ document.documentElement.dataset.theme=next; localStorage.setItem("cv-theme",next); }catch(e){}
+    return next; });
+  return <ThemeCtx.Provider value={{theme,toggle}}>
+    <div className="theme-tween min-h-screen bg-cream text-ink selection:bg-clay/20">
+      <NavBar nav={NAV} brand={BRAND} />
+      <main>
+        <Hero />
+        <Section1 />
+        <Features />
+        <Charts />
+      </main>
+      <Footer />
+      <BackToTop />
+    </div>
+  </ThemeCtx.Provider>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
