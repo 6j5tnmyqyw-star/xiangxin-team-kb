@@ -44,20 +44,28 @@ lark-cli base +record-upsert \
 
 **坑**：参数是 `--json`；upsert 不带 record_id 每次都新建——同一条只跑一次，立刻记下返回的 record_id。
 
-## Step 3：有截图/文件就传附件
+## Step 3：附件——技能/脚本必传压缩包
+
+回传的是**技能、脚本、提示词文件**这类"有实体文件"的东西，把整个文件夹打包成 zip 传到「附件交付」字段，阿祥会下载验收：
 
 ```bash
+# 1. 打包（保留文件夹结构，技能要含 SKILL.md）
+cd <技能/脚本所在目录的上一级> && zip -r /tmp/<名字>.zip <文件夹名>
+
+# 2. 上传到记录
 lark-cli base +record-upload-attachment \
   --base-token CWuIblgzqaW7lUsivCBccKSmnqf \
   --table-id tblfZ9iO2sqYEWTy \
   --record-id <Step 2 的 record_id> \
   --field-id fldJGEEUox \
-  --file <文件路径>
+  --file /tmp/<名字>.zip
 ```
+
+🔴 **打包前必查**：压缩包里不能有账号密码、AppSecret、API key（这类一律走环境变量，是公司铁律）；也不能有客户数据文件。截图类附件传「截图附件」字段 `fldCUzhQM2`。
 
 ## Step 4：回报同事
 
-给出 record_id + 一句"已回传，阿祥那边每周五统一过，采纳后会署你的名合进团队库"。
+给出 record_id + 一句"已回传，阿祥每天会看纠错日志，采纳后会署你的名合进团队库"。
 
 ## 不要做
 
