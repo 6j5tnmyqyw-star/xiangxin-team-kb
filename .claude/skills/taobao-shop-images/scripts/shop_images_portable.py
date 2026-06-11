@@ -194,6 +194,19 @@ GRAB_IDS_JS = r"""(() => [...new Set([...document.querySelectorAll('a')].map(a=>
   const m=(a.href||'').match(/itemId=(\d{10,})/); return m?m[1]:null;
 }).filter(Boolean))])()"""
 
+# 列表页元信息：ids + 分页器显示的「共X件商品 N/M」（用来确认 SPA 真的切到了目标页）
+PAGE_META_JS = r"""(() => {
+  const ids = [...new Set([...document.querySelectorAll('a')].map(a=>{
+    const m=(a.href||'').match(/itemId=(\d{10,})/); return m?m[1]:null;
+  }).filter(Boolean))];
+  const t = (document.body && document.body.innerText) || '';
+  const mt = t.match(/共\s*([\d,]+)\s*件商品\s*(\d+)\s*\/\s*(\d+)/);
+  return {ids: ids,
+          total: mt?parseInt(mt[1].replace(/,/g,'')):null,
+          pageNo: mt?parseInt(mt[2]):null,
+          pageCount: mt?parseInt(mt[3]):null};
+})()"""
+
 # ---------------- 工具 ----------------
 def safe_name(s, fallback):
     if not s: return str(fallback)
@@ -250,20 +263,40 @@ def fetch_all_ids(tab, max_pages=int(os.environ.get("MAX_PAGES", "80"))):
             pass
     print("→ 遍历商品管理列表，收集全部 itemId …")
     all_ids, seen, empty_streak = [], set(), 0
+    page_count = None   # 分页器给的权威总页数
     for cur in range(1, max_pages + 1):
         tab.goto(LIST_URL.format(cur=cur))
         tab.wait_load(); human_sleep(3, 5)
-        ids = []
-        for _ in range(3):
-            ids = tab.js(GRAB_IDS_JS) or []
-            if ids: break
+        # SPA 列表是异步渲染：URL 变了表格可能还是旧页/半页。
+        # 必须等分页器显示的页码 == 目标页 再采集，否则会把旧页内容误判成"无新增"。
+        got = None
+        for attempt in range(8):
+            r = tab.js(PAGE_META_JS) or {}
+            if r.get('pageCount'): page_count = r['pageCount']
+            ids = r.get('ids') or []
+            if ids and r.get('pageNo') == cur:
+                human_sleep(1.5, 2.5)          # 双读稳定，防懒渲染半页
+                r2 = tab.js(PAGE_META_JS) or {}
+                ids2 = r2.get('ids') or []
+                got = ids2 if len(ids2) > len(ids) else ids
+                break
             human_sleep(2, 3)
-        fresh = [i for i in ids if i not in seen]
+        if got is None:
+            print(f"   第{cur}页: 渲染未确认，重新导航再试")
+            tab.goto(LIST_URL.format(cur=cur))
+            tab.wait_load(); human_sleep(7, 10)
+            r = tab.js(PAGE_META_JS) or {}
+            if r.get('pageCount'): page_count = r['pageCount']
+            got = r.get('ids') or []
+        fresh = [i for i in got if i not in seen]
         for i in fresh: seen.add(i); all_ids.append(i)
-        print(f"   第{cur}页: 本页{len(ids)} 新增{len(fresh)} 累计{len(all_ids)}")
-        if not fresh:
-            empty_streak += 1
-            if empty_streak >= 2: break   # 连续两页无新增 = 到底
+        print(f"   第{cur}页: 本页{len(got)} 新增{len(fresh)} 累计{len(all_ids)}"
+              + (f"（共{page_count}页）" if page_count else ""))
+        if page_count:
+            if cur >= page_count: break       # 权威到底
+        elif not fresh:
+            empty_streak += 1                 # 读不到页码时的兜底：连续3页无新增才停
+            if empty_streak >= 3: break
         else:
             empty_streak = 0
     print(f"→ 共收集 {len(all_ids)} 个商品")
