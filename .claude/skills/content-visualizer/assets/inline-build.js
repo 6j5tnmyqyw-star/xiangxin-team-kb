@@ -49,7 +49,8 @@ const LIBS = [
   { file: "tailwind.js",   url: "https://cdn.tailwindcss.com",
     tag: '<script src="https://cdn.tailwindcss.com"></script>' },
 ];
-const BABEL_TAG = '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>';
+// 匹配任意版本的 Babel standalone 标签（@latest / 锁版本 @7.26.4 等都剥掉，JSX 已由 esbuild 预编译）
+const BABEL_RE = /<script[^>]*\ssrc="https?:\/\/[^"]*@babel\/standalone[^"]*"[^>]*><\/script>/gi;
 
 // 内联进 <script> 前，把内容里的 </script> 转义掉，避免提前闭合脚本块
 const guard = s => s.replace(/<\/script>/gi, "<\\/script>");
@@ -84,7 +85,7 @@ for (const lib of LIBS) {
   const code = guard(fs.readFileSync(path.join(CACHE, lib.file), "utf8"));
   html = html.replace(lib.tag, () => "<script>\n" + code + "\n</script>");
 }
-html = html.replace(BABEL_TAG, () => "");                                              // Babel 不再需要
+html = html.replace(BABEL_RE, () => "");                                               // Babel 不再需要
 html = html.replace(/<script type="text\/babel"[^>]*>[\s\S]*?<\/script>/, () => "<script>\n" + appJs + "\n</script>"); // JSX 段 → 编译后 JS
 
 fs.writeFileSync(OUT, html);

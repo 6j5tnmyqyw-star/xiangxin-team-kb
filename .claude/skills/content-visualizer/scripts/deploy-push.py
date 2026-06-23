@@ -5,7 +5,9 @@
   python3 deploy-push.py <页面.html> "<标题>" [选项]
 
 选项:
-  --scope {tenant,public,specific}  妙搭访问范围，默认 tenant(公司内可开)
+  --scope {tenant,public,specific}  妙搭访问范围，默认 public(需登录飞书)。
+                                    ⚠️ 同事(运营/张桐等)全是跨租户账号，tenant 对他们打不开；
+                                    财务/敏感数据页必须显式 --scope tenant 锁回公司内。
   --no-push                         只部署，不推送祥书
   --dry-run                         只打印 lark-cli 请求不真执行(首测用)
   --app-id <id>                     复用已有妙搭 app(更新同一页，链接不变；跳过 +create)
@@ -113,7 +115,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("html")
     ap.add_argument("title")
-    ap.add_argument("--scope", default="tenant", choices=["tenant", "public", "specific"])
+    ap.add_argument("--scope", default="public", choices=["tenant", "public", "specific"])
     ap.add_argument("--no-push", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--app-id", default=None)
@@ -150,7 +152,7 @@ def main():
     app_id = a.app_id
     if not app_id:
         name = f"可视化·{a.title}·{datetime.date.today().isoformat()}"
-        res = lark(["+create", "--name", name, "--app-type", "HTML",
+        res = lark(["+create", "--name", name, "--app-type", "html",
                     "--description", "content-visualizer 自动部署"], a.dry_run)
         if a.dry_run:
             print("(dry-run) 跳过解析 app_id；后续步骤用占位 DRYRUN")
