@@ -363,7 +363,7 @@ GPT 给的是公共知识/通用素材，没有祥书的独特性。这一步必
 
 - 主 SKILL：本文件
 - GPT 项目配置：`references/gpt-project-config.md`（首次跑时祥书提供，之后自动复用）
-- 软链：`~/.claude/skills/xiangshu-write-flow → 本目录`
+- 软链：`~/.workbuddy/skills/xiangshu-write-flow → 本目录`
 
 ---
 

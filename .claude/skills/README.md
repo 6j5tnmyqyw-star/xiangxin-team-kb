@@ -1,9 +1,34 @@
-# 公司技能包（随库自带）
+# 技能已迁到 `.workbuddy/skills/`（2026-11-20）
 
-这个文件夹里是公司给大家配的 AI 技能（29 个）。**只要你的 Claude Code 工作目录选的是本团队知识库，这些技能自动生效**，不用单独安装；每次同步（pull）自动拿到最新版。
+公司 30+ 个 AI 技能**不再放这里**，全部搬到了仓库根目录的 **`.workbuddy/skills/`**。
 
-- 技能清单 / 版本 / 谁能用 → 飞书「📦 AI 技能更新台账」：https://xiangxingolf.feishu.cn/wiki/EAI1wrGl8izDAUkD9AtcMIADnMb
-- 用法：直接对 AI 说人话，比如「帮我起草这条询单的回复」「查一下 V6S 的售后单」「把这篇文案去去 AI 味」「发个通知到群里」（自动用美观卡片，见 `lark-card`）
-- ⚠️ 部分技能有前置条件：飞书类需要装 lark-cli 并登录（装机手册第 4 节）；浏览器类（淘宝比价、店铺上新、千牛聊天抓取、短视频发布）需要装 browser-harness（装机手册 4.5 节）
-- 用出 Bug / 有建议 → 纠错日志 Base 选「规则建议修改」
-- 🚫 不要自己改这里的文件——改了下次同步会被覆盖。想改找阿祥
+## 为什么搬
+
+团队现在统一用 **WorkBuddy**。WorkBuddy 只认两个技能目录：
+
+| 级别 | 路径 | 说明 |
+|---|---|---|
+| 项目级（本库用这个） | `{工作区}/.workbuddy/skills/` | 只在本库生效，同事同步库就自动带上 |
+| 用户级 | `~/.workbuddy/skills/` | 所有项目都生效，同名时项目级优先 |
+
+WorkBuddy **不读 `.claude/skills/`**。原来放这里，等于技能根本没生效——2026-11-20 之前所有同事都踩了这个坑。
+
+## 现在怎么用
+
+1. 用 WorkBuddy 打开本库（工作区选团队知识库根目录）
+2. 直接说人话，比如「帮我对账」「把这条询单回一下」「列一下 V6S 的售后单」
+3. 技能名对得上就自动加载，不用手动装
+
+技能清单 / 版本 / 谁能用 → 飞书「📦 AI 技能更新台账」：https://xiangxingolf.feishu.cn/wiki/EAI1wrGl8izDAUkD9AtcMIADnMb
+
+## 还留着这个目录做什么
+
+给仍在使用 Claude Code 的人留个路标。如果你确实在用 Claude Code，把
+`.workbuddy/skills/` 下的技能软链到 `~/.claude/skills/` 即可：
+
+```bash
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)/.workbuddy/skills/"* ~/.claude/skills/
+```
+
+新装机的同事**不用管这个目录**，按 WorkBuddy 那套走就行。

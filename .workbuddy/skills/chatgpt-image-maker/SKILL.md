@@ -265,5 +265,5 @@ YYYYMMDD_产品_场景_版本.png
 - 主 SKILL：本文件
 - 作图模板库：`references/prompt-templates.md`
 - 运营上手指南：`references/ops-onboarding.md`
-- 阿祥本机软链：`~/.claude/skills/chatgpt-image-maker → 本目录`
+- 阿祥本机软链：`~/.workbuddy/skills/chatgpt-image-maker → 本目录`
 - 上游工具：[browser-harness](~/work/browser-harness/SKILL.md)（路径 A）

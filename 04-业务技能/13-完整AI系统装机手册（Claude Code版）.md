@@ -11,6 +11,14 @@
 
 # 📘 完整 AI 系统装机手册（Claude Code 版）
 
+> ## ⛔ 已作废（2026-11-20）
+>
+> 团队已统一改用 **WorkBuddy**，新装机的同事看 **[[04-业务技能/12-团队AI助手(WorkBuddy版)使用指南]]**，不要再按这份装 Claude Code。
+>
+> 这份保留下来只为了两件事：① `lark-cli` / `browser-harness` 的安装和登录步骤仍然有效，可以照着做；② 万一有人在用 Claude Code，技术细节还能查。
+>
+> ⚠️ 里面关于技能目录的说法全部过时了：技能从 `.claude/skills/` 迁到了 **`.workbuddy/skills/`**（WorkBuddy 不读 `.claude/skills/`）。软链做法见 `.claude/skills/README.md`。
+
 > **飞书在线版（发给团队看）**：[完整AI系统装机手册（Claude Code版）](https://xiangxingolf.feishu.cn/docx/XKcRdIyU9ovE5rxuOMxc09Wyntg) · 组织内获得链接者可阅读 · 上传 2026-05-20
 
 > 这套是**祥书自己每天在用的「深度版」AI 工作系统**。装完之后，你就有了一个能读你电脑文件、能改你飞书文档、能自动整理资料、能长期记得你偏好的私人 AI 助手。

@@ -141,7 +141,7 @@ done
 - 文案规范：`references/copywriting.md`
 - 封面规范：`references/cover-generation.md`
 - 封面叠字脚本：`scripts/make_cover.py`
-- 软链：`~/.claude/skills/short-video-auto-publisher → 本目录`
+- 软链：`~/.workbuddy/skills/short-video-auto-publisher → 本目录`
 - 上游工具：[[browser-harness]]（发布）、[[chatgpt-image-maker]]（封面底图）、[[lark-push-xiangshu]]（回报）
 
 ---

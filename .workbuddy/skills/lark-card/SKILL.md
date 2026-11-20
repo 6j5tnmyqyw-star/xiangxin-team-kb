@@ -45,7 +45,7 @@ MD='**本周滞销 TOP3 已盘点**，详情见下。
 > 数据来源：吉客云库存快照 2026-06-23'
 
 # 2. 用本技能的脚本把正文 + 标题 + 颜色 + 按钮 → 卡片 JSON
-CARD=$(python3 .claude/skills/lark-card/lark_card.py \
+CARD=$(python3 .workbuddy/skills/lark-card/lark_card.py \
   --title "📊 滞销周报 2026-06-23" \
   --template blue \
   --button "📄 打开完整周报=https://xiangxingolf.feishu.cn/wiki/xxxx" \

@@ -30,19 +30,19 @@ npx skills add https://github.com/op7418/Humanizer-zh.git
 
 ```bash
 # 克隆到 Claude Code 的 skills 目录
-git clone https://github.com/op7418/Humanizer-zh.git ~/.claude/skills/humanizer-zh
+git clone https://github.com/op7418/Humanizer-zh.git ~/.workbuddy/skills/humanizer-zh
 ```
 
 ### 方法三：手动安装
 
 1. 下载本项目的 ZIP 文件或克隆到本地
 2. 将 `Humanizer-zh` 文件夹复制到 Claude Code 的 skills 目录：
-   - **macOS/Linux**: `~/.claude/skills/`
+   - **macOS/Linux**: `~/.workbuddy/skills/`
    - **Windows**: `%USERPROFILE%\.claude\skills\`
 
 3. 确保文件夹结构如下：
    ```
-   ~/.claude/skills/humanizer-zh/
+   ~/.workbuddy/skills/humanizer-zh/
    ├── SKILL.md       # 技能定义文件（中文版）
    └── README.md      # 说明文档
    ```
