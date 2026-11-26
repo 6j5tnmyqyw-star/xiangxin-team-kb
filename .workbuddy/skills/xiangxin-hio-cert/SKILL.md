@@ -118,7 +118,7 @@ python3 scripts/render_pdf.py --output ./out.pdf [--其他参数]
 lark-cli drive +upload --file ./out.pdf --name "HIO_客户名.pdf" --as user
 
 # 3. 链接推祥书
-~/.claude/skills/lark-push-xiangshu/scripts/send.py "HIO 矢量PDF: <url>"
+~/.workbuddy/skills/lark-push-xiangshu/scripts/send.py "HIO 矢量PDF: <url>"
 ```
 
 ## 文件结构

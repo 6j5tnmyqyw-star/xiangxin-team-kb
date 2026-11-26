@@ -53,7 +53,7 @@ cd ~/work/miaoda-deploy && lark-cli apps +html-publish --app-id <app_id> --path 
 部署拿到链接后，用 `lark-push-xiangshu` 发祥书飞书（手机能点）：
 
 ```bash
-source ~/.zshrc >/dev/null 2>&1; ~/.claude/skills/lark-push-xiangshu/scripts/send.py "链接 + 一句话摘要"
+source ~/.zshrc >/dev/null 2>&1; ~/.workbuddy/skills/lark-push-xiangshu/scripts/send.py "链接 + 一句话摘要"
 ```
 
 （send.py 的 App ID/Secret 在 `~/.zshrc`，Claude Code 的 Bash 是非交互 shell 不自动读，必须先 `source`。）

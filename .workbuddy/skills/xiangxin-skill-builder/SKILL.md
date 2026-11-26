@@ -86,6 +86,6 @@ version: 1.0.0
 
 ## 第六步：按祥新双库规范归位
 
-- **阿祥自用/公司权威源**：落 `07-AI协作/skills/<name>/`，建软链到 `~/.claude/skills/`、`~/.codex/skills/`、`~/.agents/skills/`、`~/.gemini/config/skills/`，登记 `07-AI协作/skills/00-技能总索引.md`。
-- **给同事用（WorkBuddy）**：脱敏检查 0 隐私命中后，同步放进 `祥新团队知识库/.workbuddy/skills/<name>/`（⚠️ WorkBuddy 只认 `.workbuddy/skills/`，不读 `.claude/skills/`）。
+- **阿祥自用/公司权威源**：落 `07-AI协作/skills/<name>/`，建软链到 `~/.workbuddy/skills/`、`~/.codex/skills/`、`~/.agents/skills/`、`~/.gemini/config/skills/`，登记 `07-AI协作/skills/00-技能总索引.md`。
+- **给同事用（WorkBuddy）**：脱敏检查 0 隐私命中后，同步放进 `祥新团队知识库/.workbuddy/skills/<name>/`（⚠️ WorkBuddy 只认 `.workbuddy/skills/`，不读 `.workbuddy/skills/`）。
 - **回写台账**：在 `07-AI协作/AI工作台账.md` 记一笔；如果是同事自己用 WorkBuddy 摸出的好技能，提醒走 `xiangxin-knowledge-feedback` 回传总库。

@@ -29,8 +29,9 @@ type：`文案`（违禁词/品牌名/夸大/隐私）｜`调价`（录错/亏�
 
 ## 关键设计
 
-- 引擎是 `codex exec --skip-git-repo-check -s read-only --ephemeral`（只读沙盒、不落盘、跨模型）。需 `codex login` 已登录。
+- 引擎是 `codex exec --skip-git-repo-check -s read-only --ephemeral`（只读沙盒、不落盘、跨模型）。需 `codex login` 已登录 + **Clash 代理 7890 起着**（codex 走代理连 OpenAI，7890 没监听则返回空、判定"没返回有效结果"）。
 - 校官只挑毛病、不改、不发布——把关权和拍板权留给人 / 调用方。
 - 文案质检会自动带上 vault 里 `07-AI协作/规则/03-内容创作*` 的违禁词规则。
+- **参数核对**（2026-06-14 接入）：`文案`/`调价`/`通用` 类型若内容提到具体型号，自动从产品档案 `03-公司/店铺与商品/产品档案/` 拉对应型号档作**标准参数**注入，让 Codex 把话术里的参数（防水等级/续航/重量/测距/电池或充电方式/坡度/价格/型号归属）逐条核对——对不上=FAIL，档案没有=RISK，标价不一致按 RISK（页面价非成交价）。只在型号精确命中（score≥5）时注入、纯品类/无型号不注入；赠品配件排后。产品档案见 [[project_product_archive_learning]]。
 - 这是按需工具，不挂 launchd；可被其他 skill 或会话当"发布前一道关"调用。
-- 配套：采集层 [[xiangxin-jiucuo-daily]]、决策层 [[xiangxin-zhanggui-review]]（掌柜复盘）。
+- 配套：采集层 `xiangxin-jiucuo-daily`、决策层 `xiangxin-zhanggui-review`（掌柜复盘）。

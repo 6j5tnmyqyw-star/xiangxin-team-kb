@@ -20,13 +20,13 @@ metadata:
 - 「查下 XX 店铺新品列表」
 
 **不适用 / 区分**：
-- 跨店比同一型号的价格、找异常低价/串货 → 用 [[taobao-price-monitor]]（那个是按搜索词跨店抓价格，这个是盯单店上新）
+- 跨店比同一型号的价格、找异常低价/串货 → 用 `taobao-price-monitor`（那个是按搜索词跨店抓价格，这个是盯单店上新）
 - 单条商品看详情 → 直接开淘宝
 - 非天猫（C 店 taobao.com）店铺：接口结构可能不同，没测过
 
 ## 二、前置：找一个已登录淘宝的 Chrome 调试端口
 
-脚本不自己开浏览器，要连一个**已登录淘宝、开了 CDP 调试端口**的 Chrome（和 [[qianniu-chat-extract]] / [[taobao-price-monitor]] 复用同一类抓取 Chrome）。调用前先确认端口：
+脚本不自己开浏览器，要连一个**已登录淘宝、开了 CDP 调试端口**的 Chrome（和 `qianniu-chat-extract` / `taobao-price-monitor` 复用同一类抓取 Chrome）。调用前先确认端口：
 
 ```bash
 # 1) 看哪些 Chrome 开着调试端口

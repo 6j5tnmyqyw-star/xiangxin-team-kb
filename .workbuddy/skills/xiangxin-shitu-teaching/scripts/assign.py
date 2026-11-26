@@ -13,13 +13,21 @@
 """
 import argparse, json, subprocess, sys, datetime, hashlib
 
+# 截止日避开周末/法定节假日（祥书 2026-06-22 铁律），导入失败也不阻塞派单
+sys.path.insert(0, "/Users/mac/.claude/scripts")
+try:
+    from workday import next_workday
+except Exception:
+    def next_workday(d, include_today=True):
+        return d
+
 BASE_TOKEN = "EZjsb727JaMQklshxFdcUzC7nNd"
 TABLE_ID   = "tblsKb81VpiyNHl3"
 TASKLIST   = "a1b4297b-0a7a-4b0e-8748-e0b75ae15485"  # 【祥新任务】
 
 # 别名/真名 -> open_id（2026-05-25 核对）
 PEOPLE = {
-    "祥书":"ou_ed1dba4721b4aae7f7f0a96ebf37b63c","阿祥":"ou_ed1dba4721b4aae7f7f0a96ebf37b63c","邹祥书":"ou_ed1dba4721b4aae7f7f0a96ebf37b63c",
+    "祥书":"ou_f3382665e8bc80b7e4caf82b4db4e9fd","阿祥":"ou_f3382665e8bc80b7e4caf82b4db4e9fd","邹祥书":"ou_f3382665e8bc80b7e4caf82b4db4e9fd",
     "荔枝":"ou_14bf1279a6115f36cf5e98746e138f8a","何小琴":"ou_14bf1279a6115f36cf5e98746e138f8a",
     "娜娜":"ou_f4d78367e15db6628b2a5ff71218bfc7","王娜":"ou_f4d78367e15db6628b2a5ff71218bfc7",
     "红红":"ou_655d3dd4590eb9baa9415596bba31ce3","洪洪":"ou_655d3dd4590eb9baa9415596bba31ce3","洪丽华":"ou_655d3dd4590eb9baa9415596bba31ce3",
@@ -27,26 +35,29 @@ PEOPLE = {
     "老孙":"ou_047bb1745d4d61c3430023d8eb545e5c","孙庆弘":"ou_047bb1745d4d61c3430023d8eb545e5c","庆弘":"ou_047bb1745d4d61c3430023d8eb545e5c",
     "凌晨":"ou_f942122bf5205126653f41e4ebec4cb5","朱凌晨":"ou_f942122bf5205126653f41e4ebec4cb5",
     "王珊":"ou_7d255dd02750fd6f78d5a990549ed8a6","珊珊":"ou_7d255dd02750fd6f78d5a990549ed8a6",
-    "罗舒怡":"ou_a4623a2063aba67870735f004eaa06e6","舒怡":"ou_a4623a2063aba67870735f004eaa06e6","罗淑怡":"ou_a4623a2063aba67870735f004eaa06e6",
+    "罗舒怡":"ou_a4623a2063aba67870735f004eaa06e6","舒怡":"ou_a4623a2063aba67870735f004eaa06e6","罗淑怡":"ou_a4623a2063aba67870735f004eaa06e6","罗淑仪":"ou_a4623a2063aba67870735f004eaa06e6",
     "罗姣阳":"ou_bf5633d19f4f6a21aa17ba707384e56c","阳阳":"ou_bf5633d19f4f6a21aa17ba707384e56c","罗骄阳":"ou_bf5633d19f4f6a21aa17ba707384e56c",
     "华华":"ou_acf3f337f4aa9b143e7fcf85e57d4b08","许建华":"ou_acf3f337f4aa9b143e7fcf85e57d4b08",
     "海英":"ou_221a1f81dc2e230fe73b2556185c7156","姜海英":"ou_221a1f81dc2e230fe73b2556185c7156",
     "月月":"ou_a0aaf562b5da54ae4dde72b516ad0068","兰月":"ou_a0aaf562b5da54ae4dde72b516ad0068",
     "月阳":"ou_8d94d080d69538216ce3b7f9b5ad7faa","王月阳":"ou_8d94d080d69538216ce3b7f9b5ad7faa","月牙":"ou_8d94d080d69538216ce3b7f9b5ad7faa",
+    "鹤子":"ou_f972473873fc9088193de4ed88eabfed","徐鹤":"ou_f972473873fc9088193de4ed88eabfed","贺子":"ou_f972473873fc9088193de4ed88eabfed",
 }
 # 规范名（写台账时显示用）
 CANON = {
     "阿祥":"祥书","邹祥书":"祥书","何小琴":"荔枝","王娜":"娜娜","红红":"洪洪","洪丽华":"洪洪",
     "于嘉欣":"嘉欣","孙庆弘":"老孙","庆弘":"老孙","朱凌晨":"凌晨","珊珊":"王珊",
-    "舒怡":"罗舒怡","罗淑怡":"罗舒怡","阳阳":"罗姣阳","罗骄阳":"罗姣阳","许建华":"华华","姜海英":"海英",
-    "兰月":"月月","王月阳":"月阳","月牙":"月阳",
+    "舒怡":"罗舒怡","罗淑怡":"罗舒怡","罗淑仪":"罗舒怡","阳阳":"罗姣阳","罗骄阳":"罗姣阳","许建华":"华华","姜海英":"海英",
+    "兰月":"月月","王月阳":"月阳","月牙":"月阳","徐鹤":"鹤子","贺子":"鹤子",
 }
 # 师傅 -> [徒弟]（规范名，用于校验师徒关系）
-# 2026-06-03 调整：荔枝直接带嘉欣+洪洪（嘉欣从娜娜名下上移）；娜娜名下留老孙
+# 以飞书「🌳 师徒名单」为底，叠加阿祥口述的最新变更
+# 2026-11-06：老孙师傅改为娜娜；凌晨、王珊由阳阳带
 TREE = {
-    "祥书":["荔枝"], "荔枝":["嘉欣","洪洪","娜娜"], "娜娜":["老孙"],
-    "洪洪":["凌晨","王珊"], "嘉欣":["罗舒怡","罗姣阳"], "老孙":["华华","海英"],
-    "王珊":["月月","月阳"],
+    "祥书":["荔枝"], "荔枝":["嘉欣"], "嘉欣":["娜娜","罗舒怡"],
+    "罗舒怡":["罗姣阳","鹤子"], "罗姣阳":["凌晨","王珊"],
+    "王珊":["月阳"], "月阳":["月月","彭彭"], "彭彭":["九一"],
+    "娜娜":["老孙"], "老孙":["华华","海英"],
 }
 
 def canon(name): return CANON.get(name, name)
@@ -87,7 +98,7 @@ def main():
         sys.exit(2)
 
     today = datetime.date.today()
-    due   = today + datetime.timedelta(days=a.days)
+    due   = next_workday(today + datetime.timedelta(days=a.days))
     due_str = f"{due.isoformat()} 18:00:00"
 
     summary = f"【师徒教学】学会：{a.content}"

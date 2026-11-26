@@ -55,16 +55,40 @@ def log(msg: str):
         pass
 
 
+def _agent_env() -> dict:
+    """claude 用的 env：注入 relay 认证（launchd 读不到 ~/.zshrc，claude 裸跑退回
+    本地 OAuth，2026-06-08 OAuth 过期后静默挂 → 2026-06-11 修，同 message-radar 修法）。
+    zshrc 是真源：两个 key 都在就整体覆盖，防继承来的半套配置混搭出 403。"""
+    env = os.environ.copy()
+    env.pop("CLAUDECODE", None)  # 防 claude -p 在 claude 环境里嵌套
+    zshrc = Path.home() / ".zshrc"
+    if zshrc.exists():
+        text = zshrc.read_text(encoding="utf-8", errors="ignore")
+        found = {}
+        for key in ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"):
+            m = re.search(rf'^export {key}="([^"]+)"', text, re.M)
+            if m:
+                found[key] = m.group(1)
+        if len(found) == 2:
+            env.update(found)
+        else:
+            for k, v in found.items():
+                env.setdefault(k, v)
+    if "ANTHROPIC_BASE_URL" in env:  # relay 是自家 VPS，直连不过代理
+        host = env["ANTHROPIC_BASE_URL"].split("//", 1)[-1].split("/", 1)[0].split(":", 1)[0]
+        env["NO_PROXY"] = ",".join(filter(None, [env.get("NO_PROXY", ""), host]))
+        env["no_proxy"] = env["NO_PROXY"]
+    return env
+
+
 def claude(instruction: str, stdin_data: str = "", timeout: int = 600) -> str:
     """调 claude -p;大段数据走 stdin。失败返回空串。零工具调用、保守模式。
     cwd 设在 /tmp:claude -p 会自动加载工作目录 CLAUDE.md,在 vault 内跑会串入主规则。"""
-    env = os.environ.copy()
-    env.pop("CLAUDECODE", None)  # 防 claude -p 在 claude 环境里嵌套
     try:
         r = subprocess.run(
             ["claude", "--strict-mcp-config", "--disable-slash-commands", "-p", instruction],
             input=stdin_data, capture_output=True, text=True, timeout=timeout,
-            cwd="/tmp", env=env,
+            cwd="/tmp", env=_agent_env(),
         )
     except subprocess.TimeoutExpired:
         log("⚠️  claude 超时")
@@ -73,7 +97,7 @@ def claude(instruction: str, stdin_data: str = "", timeout: int = 600) -> str:
         log("⚠️  找不到 claude 命令(PATH?)")
         return ""
     if r.returncode != 0:
-        log(f"⚠️  claude 异常退出: {r.stderr[:300]}")
+        log(f"⚠️  claude 异常退出: {(r.stderr or r.stdout)[:300]}")
         return ""
     return (r.stdout or "").strip()
 

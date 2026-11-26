@@ -1,7 +1,7 @@
 ---
 name: xiangxin-doc-task-sync
 version: 1.0.0
-description: "祥新公司专用：把任意飞书文档里的待办（勾选框 ☐ 或待办文字行）转成绑定飞书任务的【同步任务卡片】——文档里勾掉=任务中心完成，反之亦然（双向同步）。自动给每条待办建飞书任务（挂【祥新任务】清单、按文档归属/点名派人/识别优先级与截止），再把文档里对应的勾选框替换成 <task> 卡片。当祥书给一个飞书文档链接并说『把里面待办挂上飞书任务』『这些待办关联飞书任务』『待办转成同步任务卡片』『文档待办建成任务』『待办跟飞书任务关联起来』『把这文档的待办同步到任务』时使用。区别于 xiangxin-yunying-meeting（那个是妙记→提取→登记全流程，本 skill 只做"待办→同步卡片"这一段，可作用于任意文档）。"
+description: 'Convert Feishu document to-dos into linked Feishu task cards with bidirectional completion sync. Use when asked to turn a document’s pending items into tasks.'
 metadata:
   requires:
     bins: ["lark-cli"]
